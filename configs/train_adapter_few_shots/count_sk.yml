@@ -1,0 +1,18 @@
+path_to_output_dir: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/adapter_models_few_shots/count_sk
+path_to_labels: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/labels
+path_to_features: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/features/count_sk
+n_iters: 10 # number of models to train using each setting
+train_n: 
+    - 2
+    - 4
+    - 8
+    - 16
+    - 32
+    - 64
+    - 128
+feature_type: count
+overwrite: True
+
+    
+    
+   

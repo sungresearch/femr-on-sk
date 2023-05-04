@@ -1,0 +1,10 @@
+path_to_labels: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/labels
+path_to_output_dir: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/features/clmbr_stanford
+overwrite: True
+
+featurizer_config:
+    type: clmbr
+    path_to_clmbr_data: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/clmbr_models/clmbr_stanford
+    
+    
+   

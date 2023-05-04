@@ -1,0 +1,7 @@
+path_to_labels: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/labels
+path_to_output_dir: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/features/clmbr_stanford_ft_full
+overwrite: True
+
+featurizer_config:
+    type: clmbr
+    path_to_clmbr_data: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/clmbr_models/clmbr_stanford_ft_full/CLMBR_learning_rate_1e-5_max_iter_1000000_n_heads_12_n_layers_12_rotary_type_global   

@@ -1,0 +1,9 @@
+path_to_output_dir: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/adapter_models/count_sk
+path_to_labels: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/labels
+path_to_features: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/features/count_sk
+feature_type: count
+overwrite: True
+
+    
+    
+   

@@ -1,0 +1,11 @@
+path_to_output_dir: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/clmbr_models/clmbr_sk
+overwrite: True
+transformer_config:
+    learning_rate:
+        - 1e-5
+    rotary_type: global
+    n_heads: 12
+    n_layers: 12
+    max_iter: 1000000
+    
+   
