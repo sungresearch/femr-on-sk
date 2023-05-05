@@ -1,10 +1,8 @@
 model_names = {
     "clmbr_sk": "SK",
     "count_sk": "SK [Count]",
-    "count_sk_no_expansion": "SK [Count] Reg",
     "clmbr_stanford": "Stanford",
-    "clmbr_stanford_ft_full": "Stanford_Cont-Pre",
-    "clmbr_stanford_ft_lastlayer": "Stanford_FT-last",
+    "clmbr_stanford_cp": "Stanford_Cont-Pre",
 }
 
 task_names = {

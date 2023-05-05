@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=lawrence.guo@sickkids.ca
-#SBATCH --time=1-00:00 # Runtime in D-HH:MM
+#SBATCH --time=3-00:00 # Runtime in D-HH:MM
 #SBATCH --job-name=job
 #SBATCH --nodes=1
 #SBATCH -n 24 #number of cores to reserve, default is 1
