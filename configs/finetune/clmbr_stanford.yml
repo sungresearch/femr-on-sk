@@ -1,0 +1,7 @@
+path_to_output_dir: data/clmbr_models/clmbr_stanford_ft
+path_to_og_clmbr_data: data/clmbr_models/clmbr_stanford
+path_to_task_batches: data/features/clmbr_stanford
+overwrite: True
+transformer_config:
+    learning_rate: 1e-5
+    max_iter: 1000000

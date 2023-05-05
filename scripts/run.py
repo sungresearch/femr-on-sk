@@ -268,6 +268,62 @@ if __name__ == "__main__":
 
             subprocess.run(cmd)
 
+    if args.finetune is not None:
+        """
+        (Task-specific) fine-tuning of CLMBR using config file. Also supports two-step finetuning
+        proposed in https://arxiv.org/abs/2202.10054
+
+        Important: the finetuning step assumes that you have used the og CLMBR model
+        to generate features already for task-specific adapter training (linear-probing),
+        because the feature generation step creates the task batches.
+
+        Will train multiple fine-tuned models if path_to_task_batches contain multiple
+        tasks.
+
+        Example yml config:
+            ```
+            path_to_output_dir: data/clmbr_models/clmbr_stanford_ft
+            path_to_og_clmbr_data: data/clmbr_models/clmbr_stanford
+            path_to_task_batches: data/features/clmbr_stanford
+            overwrite: False
+            two_step_finetuning: False
+            transformer_config:
+                learning_rate: 1e-5
+                max_iter: 1000000
+            ```
+        """
+        config = read_yaml(os.path.join(path_root, "configs", args.finetune))
+
+        PATH_SCRIPT = os.path.join(path_root, "scripts", "finetune.py")
+        PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
+        PATH_OG_CLMBR_DATA = os.path.join(path_root, config["path_to_og_clmbr_data"])
+        PATH_TASK_BATCHES = os.path.join(path_root, config["path_to_task_batches"])
+
+        available_tasks = list_dir(PATH_TASK_BATCHES)
+
+        for task in available_tasks:
+            cmd = [
+                "python",
+                PATH_SCRIPT,
+                os.path.join(PATH_OUTPUT_DIR, task),
+                "--path_to_task_batches",
+                os.path.join(PATH_TASK_BATCHES, task, "task_batches"),
+                "--path_to_og_clmbr_data",
+                PATH_OG_CLMBR_DATA,
+                "--learning_rate",
+                str(config["transformer_config"]["learning_rate"]),
+                "--max_iter",
+                str(config["transformer_config"]["max_iter"]),
+            ]
+
+            if "two_step_finetuning" in config and config["two_step_finetuning"]:
+                cmd += ["--two_step_finetuning"]
+
+            if config["overwrite"]:
+                cmd += ["--overwrite"]
+
+            subprocess.run(cmd)
+
     if args.train_adapter is not None:
         """
         Train adapter model (linear probe) using config file.
