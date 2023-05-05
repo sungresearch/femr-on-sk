@@ -14,7 +14,7 @@
 source activate /hpf/projects/lsung/envs/lguo/femr
 cd /hpf/projects/lsung/projects/lguo/femr-on-sk/scripts
 
-## run labelers 
+## run labelers
 #python run.py --label="label.yml"
 
 ## run count featurizer
@@ -30,5 +30,3 @@ python run.py --evaluate_adapter="evaluate_adapter"
 #     --train_adapter="train_adapter/count_sk_no_expansion.yml" \
 #     --train_adapter_reduced_samples="train_adapter_reduced_samples/count_sk_no_expansion.yml" \
 #     --evaluate_adapter="evaluate_adapter"
-
-    

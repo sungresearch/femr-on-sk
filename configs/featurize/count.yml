@@ -5,5 +5,3 @@ overwrite: True
 featurizer_config:
     type: count
     num_threads: 4
-    
-   

@@ -20,5 +20,5 @@ python parquet_to_csv.py \
     --path_omop_parquet_source=$PATH_SOURCE \
     --path_omop_csv_destination=$PATH_DESTINATION \
     --overwrite \
-    --repartition_size=$REPARTITION_SIZE 
+    --repartition_size=$REPARTITION_SIZE
     #--compression=$COMPRESSION

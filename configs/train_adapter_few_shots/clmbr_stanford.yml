@@ -2,7 +2,7 @@ path_to_output_dir: data/adapter_models_few_shots/clmbr_stanford
 path_to_labels: data/labels
 path_to_features: data/features/clmbr_stanford
 n_iters: 10 # number of models to train using each setting
-train_n: 
+train_n:
     - 2
     - 4
     - 8
@@ -12,7 +12,3 @@ train_n:
     - 128
 feature_type: clmbr
 overwrite: True
-
-    
-    
-   

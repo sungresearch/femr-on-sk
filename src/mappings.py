@@ -9,11 +9,11 @@ model_names = {
 
 task_names = {
     "long_los": "Long LOS",
-    "thrombocytopenia_lab": "Thrombocytopenia", 
+    "thrombocytopenia_lab": "Thrombocytopenia",
     "hyponatremia_lab": "Hyponatremia",
     "anemia_lab": "Anemia",
     "mortality": "In-hospital Mortality",
     "hyperkalemia_lab": "Hyperkalemia",
     "readmission": "30-day Readmission",
-    "hypoglycemia_lab": "Hypoglycemia", 
+    "hypoglycemia_lab": "Hypoglycemia",
 }

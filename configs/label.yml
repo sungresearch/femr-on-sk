@@ -11,4 +11,3 @@ path_to_output_dir: data/labels
 overwrite: True
 num_threads: 4
 max_labels_per_patient: 1
-   

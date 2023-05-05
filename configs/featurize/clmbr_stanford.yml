@@ -5,6 +5,3 @@ overwrite: True
 featurizer_config:
     type: clmbr
     path_to_clmbr_data: data/clmbr_models/clmbr_stanford
-    
-    
-   

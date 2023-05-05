@@ -1,18 +1,16 @@
 """
-Runs script with config file. 
-Searches for configs stored under "[root_path]/[configs]/*". 
+Runs script with config file.
+Searches for configs stored under "[root_path]/[configs]/*".
 For some, specifying the directory, e.g., "featurize" will run all configs stored there.
 
 Usage example:
-    python run.py --label "label.yml" 
+    python run.py --label "label.yml"
 """
 
 import subprocess
 import argparse
 import os
-import pdb
 
-from itertools import zip_longest
 from sklearn.model_selection import ParameterGrid
 from src.io import read_yaml
 from src.default_paths import path_root
@@ -20,29 +18,21 @@ from src.default_paths import path_root
 
 def list_dir(path: str):
     """get list of file/directory names excluding nb checkpoints"""
-    
-    return [
-        x for x in os.listdir(path)
-        if x != ".ipynb_checkpoints"
-    ]
+
+    return [x for x in os.listdir(path) if x != ".ipynb_checkpoints"]
 
 
 def get_configs(config_path: str):
     """get list of configs from config_path"""
-    
+
     if os.path.isdir(config_path):
         configs = [
-            read_yaml(
-                os.path.join(
-                    config_path, file
-                )
-            )
-            for file in list_dir(config_path)
+            read_yaml(os.path.join(config_path, file)) for file in list_dir(config_path)
         ]
 
     else:
         configs = [read_yaml(config_path)]
-    
+
     return configs
 
 
@@ -56,15 +46,15 @@ if __name__ == "__main__":
     parser.add_argument("--train_adapter", type=str, default=None)
     parser.add_argument("--train_adapter_few_shots", type=str, default=None)
     parser.add_argument("--evaluate_adapter", type=str, default=None)
-    
+
     args = parser.parse_args()
-    
+
     if args.label is not None:
         """
         Run labeler using config file.
         Supports running multiple labelers.
-        
-        Example yml config: 
+
+        Example yml config:
             ```
             labelers:
                 - mortality
@@ -84,29 +74,32 @@ if __name__ == "__main__":
         config = read_yaml(os.path.join(path_root, "configs", args.label))
         PATH_SCRIPT = os.path.join(path_root, "scripts", "label.py")
         PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
-        
+
         for labeler in config["labelers"]:
             cmd = [
-                "python", PATH_SCRIPT,
+                "python",
+                PATH_SCRIPT,
                 os.path.join(PATH_OUTPUT_DIR, labeler),
-                "--num_threads", str(config["num_threads"]),
-                "--max_labels_per_patient", str(config["max_labels_per_patient"]),
-                "--labeler", labeler,
+                "--num_threads",
+                str(config["num_threads"]),
+                "--max_labels_per_patient",
+                str(config["max_labels_per_patient"]),
+                "--labeler",
+                labeler,
             ]
 
             if config["overwrite"]:
                 cmd += ["--overwrite"]
 
             subprocess.run(cmd)
-            
-            
+
     if args.featurize is not None:
         """
-        Run featurizer using config file. 
+        Run featurizer using config file.
         Featurizer will compute features for each label in path_to_labels.
-        If args.featurize is a path, will run all config files. 
-        
-        Example yml config for count featurizer: 
+        If args.featurize is a path, will run all config files.
+
+        Example yml config for count featurizer:
             ```
             path_to_labels: data/labels
             path_to_output_dir: data/features/count_sk
@@ -116,7 +109,7 @@ if __name__ == "__main__":
                 type: count
                 num_threads: 4
             ```
-            
+
         Example yml config for CLMBR featurizer:
             ```
             path_to_labels: data/labels
@@ -127,61 +120,58 @@ if __name__ == "__main__":
                 type: clmbr
                 path_to_clmbr_data: data/clmbr_models/clmbr_stanford
             ```
-        """  
+        """
         PATH_CONFIG = os.path.join(path_root, "configs", args.featurize)
         configs = get_configs(PATH_CONFIG)
-        
+
         PATH_SCRIPT = os.path.join(path_root, "scripts", "featurize.py")
-        
+
         NUM_THREADS = 0
         PATH_CLMBR_DATA = None
-        
+
         for config in configs:
             PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
             PATH_LABELS = os.path.join(path_root, config["path_to_labels"])
-            
+
             if "num_threads" in config["featurizer_config"]:
                 NUM_THREADS = config["featurizer_config"]["num_threads"]
-                
+
             if "path_to_clmbr_data" in config["featurizer_config"]:
                 PATH_CLMBR_DATA = os.path.join(
-                    path_root, 
-                    config["featurizer_config"]["path_to_clmbr_data"]
+                    path_root, config["featurizer_config"]["path_to_clmbr_data"]
                 )
-            
+
             available_labels = list_dir(PATH_LABELS)
             # get labels for which to featurize
             for label in available_labels:
-                
                 cmd = [
-                    "python", PATH_SCRIPT,
+                    "python",
+                    PATH_SCRIPT,
                     os.path.join(PATH_OUTPUT_DIR, label),
-                    "--path_to_labels", os.path.join(PATH_LABELS, label),
+                    "--path_to_labels",
+                    os.path.join(PATH_LABELS, label),
                 ]
 
                 if config["featurizer_config"]["type"] == "count":
                     cmd += [
                         "--count",
-                        "--num_threads", str(NUM_THREADS),
-                    ]
-                    
-                elif config["featurizer_config"]["type"] == "clmbr":
-                    cmd += [
-                        "--clmbr",
-                        "--path_to_clmbr_data", PATH_CLMBR_DATA
+                        "--num_threads",
+                        str(NUM_THREADS),
                     ]
 
-                if config["overwrite"]:                    
+                elif config["featurizer_config"]["type"] == "clmbr":
+                    cmd += ["--clmbr", "--path_to_clmbr_data", PATH_CLMBR_DATA]
+
+                if config["overwrite"]:
                     cmd += ["--overwrite"]
-                    
+
                 subprocess.run(cmd)
-            
-            
+
     if args.pretrain is not None:
         """
         Pretrain CLMBR using config file.
-        Supports multiple hyperparameter settings specified in transformer_config 
-        
+        Supports multiple hyperparameter settings specified in transformer_config
+
         Example yml config:
             ```
             path_to_output_dir: data/clmbr_models/clmbr_sk
@@ -196,100 +186,97 @@ if __name__ == "__main__":
                 max_iter: 1000000
             ```
         """
-        
+
         config = read_yaml(os.path.join(path_root, "configs", args.pretrain))
         PATH_SCRIPT = os.path.join(path_root, "scripts", "pretrain.py")
         PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
-        
+
         # create hyperparameter grid
-        for k,v in config['transformer_config'].items():
+        for k, v in config["transformer_config"].items():
             if type(v) == list:
                 continue
-            config['transformer_config'][k] = [v]
-        
-        model_param_grid = list(ParameterGrid(config['transformer_config']))
+            config["transformer_config"][k] = [v]
+
+        model_param_grid = list(ParameterGrid(config["transformer_config"]))
 
         for params in model_param_grid:
             params_list = []
-            for k,v in params.items():
-                params_list+=["--" + str(k), str(v)]
-                
-            model_name = "CLMBR_" + "_".join(
-                [x.replace("--" , "") for x in params_list]
-            )
-            
+            for k, v in params.items():
+                params_list += ["--" + str(k), str(v)]
+
+            model_name = "CLMBR_" + "_".join([x.replace("--", "") for x in params_list])
+
             cmd = [
-                "python", PATH_SCRIPT,
+                "python",
+                PATH_SCRIPT,
                 os.path.join(PATH_OUTPUT_DIR, model_name),
             ] + params_list
-            
+
             if config["overwrite"]:
                 cmd += ["--overwrite"]
-            
+
             subprocess.run(cmd)
-            
-            
+
     if args.continue_pretrain is not None:
         """
         Continued pretraining of CLMBR using config file.
         Supports multiple hyperparameter settings specified in transformer_config
-        
+
         Example yml config:
             ```
             path_to_output_dir: data/clmbr_models/clmbr_stanford_cp
             path_to_og_clmbr_data: data/clmbr_models/clmbr_stanford
             overwrite: True
             transformer_config:
-                learning_rate: 
+                learning_rate:
                     - 1e-5
                     - 1e-4
                 max_iter: 1000000
             ```
         """
         config = read_yaml(os.path.join(path_root, "configs", args.continue_pretrain))
-        
+
         PATH_SCRIPT = os.path.join(path_root, "scripts", "continue_pretrain.py")
         PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
         PATH_OG_CLMBR_DATA = os.path.join(path_root, config["path_to_og_clmbr_data"])
-        
+
         # create hyperparameter grid
-        for k,v in config['transformer_config'].items():
+        for k, v in config["transformer_config"].items():
             if type(v) == list:
                 continue
-            config['transformer_config'][k] = [v]
-            
-        model_param_grid = list(ParameterGrid(config['transformer_config']))
+            config["transformer_config"][k] = [v]
+
+        model_param_grid = list(ParameterGrid(config["transformer_config"]))
 
         for params in model_param_grid:
             params_list = []
-            for k,v in params.items():
-                params_list+=["--" + str(k), str(v)]
-                
-            model_name = "CLMBR_" + "_".join(
-                [x.replace("--" , "") for x in params_list]
-            )
-            
+            for k, v in params.items():
+                params_list += ["--" + str(k), str(v)]
+
+            model_name = "CLMBR_" + "_".join([x.replace("--", "") for x in params_list])
+
             cmd = [
-                "python", PATH_SCRIPT,
+                "python",
+                PATH_SCRIPT,
                 os.path.join(PATH_OUTPUT_DIR, model_name),
-                "--path_to_og_clmbr_data", PATH_OG_CLMBR_DATA,
+                "--path_to_og_clmbr_data",
+                PATH_OG_CLMBR_DATA,
             ] + params_list
-            
+
             if config["overwrite"]:
                 cmd += ["--overwrite"]
-                
+
             subprocess.run(cmd)
-            
-            
+
     if args.train_adapter is not None:
         """
         Train adapter model (linear probe) using config file.
-        
+
         Will train multiple adapter models if path_to_labels & path_to_features
         contain multiple tasks.
-        
-        If args.train_adapter is a path, runs all config files. 
-        
+
+        If args.train_adapter is a path, runs all config files.
+
         Example yml config:
             ```
             path_to_output_dir: data/adapter_models/count_sk
@@ -301,43 +288,45 @@ if __name__ == "__main__":
         """
         PATH_CONFIG = os.path.join(path_root, "configs", args.train_adapter)
         configs = get_configs(PATH_CONFIG)
-        
+
         for config in configs:
             PATH_SCRIPT = os.path.join(path_root, "scripts", "train_adapter.py")
             PATH_FEATURES = os.path.join(path_root, config["path_to_features"])
             PATH_LABELS = os.path.join(path_root, config["path_to_labels"])
             PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
-            
-            available_features = list_dir(PATH_FEATURES)
-            
-            for features in available_features:
 
+            available_features = list_dir(PATH_FEATURES)
+
+            for features in available_features:
                 cmd = [
-                    "python", PATH_SCRIPT, 
+                    "python",
+                    PATH_SCRIPT,
                     os.path.join(PATH_OUTPUT_DIR, features),
-                    "--path_to_labels", os.path.join(PATH_LABELS, features),
-                    "--path_to_features", os.path.join(PATH_FEATURES, features),
-                    "--feature_type", config["feature_type"]
+                    "--path_to_labels",
+                    os.path.join(PATH_LABELS, features),
+                    "--path_to_features",
+                    os.path.join(PATH_FEATURES, features),
+                    "--feature_type",
+                    config["feature_type"],
                 ]
 
                 if config["overwrite"]:
                     cmd += ["--overwrite"]
 
                 subprocess.run(cmd)
-   
 
     if args.train_adapter_few_shots is not None:
         """
         Train adapter model with reduced samples using config file
-        If path is specified, run using all config files. 
-        
+        If path is specified, run using all config files.
+
         Example yml config:
             ```
             path_to_output_dir: data/adapter_models_few_shots/count_sk
             path_to_labels: data/labels
             path_to_features: data/features/count_sk
-            n_iters: 10 
-            train_n: 
+            n_iters: 10
+            train_n:
                 - 2
                 - 4
                 - 8
@@ -351,9 +340,9 @@ if __name__ == "__main__":
         """
         PATH_CONFIG = os.path.join(path_root, "configs", args.train_adapter_few_shots)
         configs = get_configs(PATH_CONFIG)
-        
+
         PATH_SCRIPT = os.path.join(path_root, "scripts", "train_adapter.py")
-        
+
         for config in configs:
             path_features = os.path.join(path_root, config["path_to_features"])
             path_labels = os.path.join(path_root, config["path_to_labels"])
@@ -363,32 +352,35 @@ if __name__ == "__main__":
 
             path_output_dir = os.path.join(path_root, config["path_to_output_dir"])
             available_features = list_dir(path_features)
-            
-            for train_n in config['train_n']:
+
+            for train_n in config["train_n"]:
                 for i_iter in range(config["n_iters"]):
                     output_suffix = f"_{train_n}_iter{i_iter}"
                     for features in available_features:
-
                         cmd = [
-                            "python", PATH_SCRIPT, 
-                            os.path.join(path_output_dir+output_suffix, features),
-                            "--path_to_labels", os.path.join(path_labels, features),
-                            "--path_to_features", os.path.join(path_features, features),
-                            "--feature_type", config["feature_type"],
-                            "--train_n", str(train_n),
+                            "python",
+                            PATH_SCRIPT,
+                            os.path.join(path_output_dir + output_suffix, features),
+                            "--path_to_labels",
+                            os.path.join(path_labels, features),
+                            "--path_to_features",
+                            os.path.join(path_features, features),
+                            "--feature_type",
+                            config["feature_type"],
+                            "--train_n",
+                            str(train_n),
                         ]
 
                         if config["overwrite"]:
                             cmd += ["--overwrite"]
 
                         subprocess.run(cmd)
-                    
-                    
+
     if args.evaluate_adapter is not None:
         """
         Evaluate adapter model using config file
-        If args.evaluate_adapter is path, runs all config files. 
-        
+        If args.evaluate_adapter is path, runs all config files.
+
         Example yml config:
             ```
             path_to_output_dir: data/evaluate/adapter_models
@@ -396,38 +388,38 @@ if __name__ == "__main__":
             overwrite: True
             ```
         """
-        
+
         config_path = os.path.join(path_root, "configs", args.evaluate_adapter)
         configs = get_configs(config_path)
-        
+
         PATH_SCRIPT = os.path.join(path_root, "scripts", "evaluate_adapter.py")
-        
+
         for config in configs:
             path_models = os.path.join(path_root, config["path_to_models"])
             available_models = list_dir(path_models)
-            
+
             for model in available_models:
                 available_tasks = list_dir(os.path.join(path_models, model))
-                
+
                 for task in available_tasks:
-                    path_model = os.path.join(
-                        path_models, model, task
-                    )
-                    
+                    path_model = os.path.join(path_models, model, task)
+
                     path_output_dir = os.path.join(
                         path_root, config["path_to_output_dir"], model, task
                     )
-                    
+
                     cmd = [
-                        "python", PATH_SCRIPT,
+                        "python",
+                        PATH_SCRIPT,
                         path_output_dir,
-                        "--path_to_model", path_model,
+                        "--path_to_model",
+                        path_model,
                     ]
-                    
+
                     if "n_boots" in config:
                         cmd += ["--n_boots", config["n_boots"]]
-                    
+
                     if config["overwrite"]:
                         cmd += ["--overwrite"]
-                    
+
                     subprocess.run(cmd)
