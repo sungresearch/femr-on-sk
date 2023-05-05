@@ -7,14 +7,8 @@ labelers:
     - hypoglycemia_lab
     - hyponatremia_lab
     - anemia_lab
-path_to_output_dir: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/labels
+path_to_output_dir: data/labels
 overwrite: True
 num_threads: 4
 max_labels_per_patient: 1
-slurm:
-    cpus: 4
-    mem: 8000
-    error: logs/error-label.%J.err
-    output: logs/out-label.%J.out
-    env: /hpf/projects/lsung/envs/lguo/femr
    

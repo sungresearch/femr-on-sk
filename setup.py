@@ -10,5 +10,6 @@ setup(
         "pandas",
         "matplotlib",
         "seaborn",
+        "dask[complete]",
     ]
 )

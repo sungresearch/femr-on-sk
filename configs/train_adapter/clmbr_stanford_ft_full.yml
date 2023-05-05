@@ -1,9 +1,0 @@
-path_to_output_dir: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/adapter_models/clmbr_stanford_ft_full
-path_to_labels: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/labels
-path_to_features: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/features/clmbr_stanford_ft_full
-feature_type: clmbr
-overwrite: True
-
-    
-    
-   

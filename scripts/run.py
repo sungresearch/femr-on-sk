@@ -14,7 +14,7 @@ import pdb
 
 from itertools import zip_longest
 from sklearn.model_selection import ParameterGrid
-from src.utils import read_yaml
+from src.io import read_yaml
 from src.default_paths import path_root
 
 
@@ -51,32 +51,44 @@ if __name__ == "__main__":
     parser.add_argument("--label", type=str, default=None)
     parser.add_argument("--featurize", type=str, default=None)
     parser.add_argument("--pretrain", type=str, default=None)
+    parser.add_argument("--continue_pretrain", type=str, default=None)
     parser.add_argument("--finetune", type=str, default=None)
     parser.add_argument("--train_adapter", type=str, default=None)
+    parser.add_argument("--train_adapter_few_shots", type=str, default=None)
     parser.add_argument("--evaluate_adapter", type=str, default=None)
-    
-    parser.add_argument(
-        "--train_adapter_few_shots", 
-        type=str, default=None, 
-        help="train for few shots experiment"
-    )
     
     args = parser.parse_args()
     
     if args.label is not None:
         """
-        Run labeler using config file
-        """
-        config = read_yaml(
-            os.path.join(path_root, "configs", args.label)
-        )
+        Run labeler using config file.
+        Supports running multiple labelers.
         
-        path_script = os.path.join(path_root, "scripts", "label.py")
+        Example yml config: 
+            ```
+            labelers:
+                - mortality
+                - long_los
+                - readmission
+                - thrombocytopenia_lab
+                - hyperkalemia_lab
+                - hypoglycemia_lab
+                - hyponatremia_lab
+                - anemia_lab
+            path_to_output_dir: data/labels
+            overwrite: True
+            num_threads: 4
+            max_labels_per_patient: 1
+            ```
+        """
+        config = read_yaml(os.path.join(path_root, "configs", args.label))
+        PATH_SCRIPT = os.path.join(path_root, "scripts", "label.py")
+        PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
         
         for labeler in config["labelers"]:
             cmd = [
-                "python", path_script,
-                os.path.join(config["path_to_output_dir"], labeler),
+                "python", PATH_SCRIPT,
+                os.path.join(PATH_OUTPUT_DIR, labeler),
                 "--num_threads", str(config["num_threads"]),
                 "--max_labels_per_patient", str(config["max_labels_per_patient"]),
                 "--labeler", labeler,
@@ -91,40 +103,72 @@ if __name__ == "__main__":
     if args.featurize is not None:
         """
         Run featurizer using config file. 
-        If path is specified, run using all config files. 
-        Config file specifies whether to run count or CLMBR featurizer.
-        """  
-        config_path = os.path.join(
-            path_root, "configs", args.featurize
-        )
+        Featurizer will compute features for each label in path_to_labels.
+        If args.featurize is a path, will run all config files. 
         
-        configs = get_configs(config_path)
-        path_script = os.path.join(path_root, "scripts", "featurize.py")
+        Example yml config for count featurizer: 
+            ```
+            path_to_labels: data/labels
+            path_to_output_dir: data/features/count_sk
+            overwrite: True
+
+            featurizer_config:
+                type: count
+                num_threads: 4
+            ```
+            
+        Example yml config for CLMBR featurizer:
+            ```
+            path_to_labels: data/labels
+            path_to_output_dir: data/features/clmbr_stanford
+            overwrite: True
+
+            featurizer_config:
+                type: clmbr
+                path_to_clmbr_data: data/clmbr_models/clmbr_stanford
+            ```
+        """  
+        PATH_CONFIG = os.path.join(path_root, "configs", args.featurize)
+        configs = get_configs(PATH_CONFIG)
+        
+        PATH_SCRIPT = os.path.join(path_root, "scripts", "featurize.py")
+        
+        NUM_THREADS = 0
+        PATH_CLMBR_DATA = None
         
         for config in configs:
-            available_labels = list_dir(config["path_to_labels"])
+            PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
+            PATH_LABELS = os.path.join(path_root, config["path_to_labels"])
+            
+            if "num_threads" in config["featurizer_config"]:
+                NUM_THREADS = config["featurizer_config"]["num_threads"]
+                
+            if "path_to_clmbr_data" in config["featurizer_config"]:
+                PATH_CLMBR_DATA = os.path.join(
+                    path_root, 
+                    config["featurizer_config"]["path_to_clmbr_data"]
+                )
+            
+            available_labels = list_dir(PATH_LABELS)
             # get labels for which to featurize
             for label in available_labels:
                 
                 cmd = [
-                    "python", path_script,
-                    os.path.join(config["path_to_output_dir"], label),
-                    "--path_to_labels", os.path.join(config["path_to_labels"], label),
+                    "python", PATH_SCRIPT,
+                    os.path.join(PATH_OUTPUT_DIR, label),
+                    "--path_to_labels", os.path.join(PATH_LABELS, label),
                 ]
 
                 if config["featurizer_config"]["type"] == "count":
                     cmd += [
                         "--count",
-                        "--num_threads", str(config["featurizer_config"]["num_threads"]),
+                        "--num_threads", str(NUM_THREADS),
                     ]
-                    
-                    if "ontology_expansion" in config["featurizer_config"] and config["featurizer_config"]["ontology_expansion"]:
-                        cmd += ["--ontology_expansion"]
                     
                 elif config["featurizer_config"]["type"] == "clmbr":
                     cmd += [
                         "--clmbr",
-                        "--path_to_clmbr_data", config["featurizer_config"]["path_to_clmbr_data"]
+                        "--path_to_clmbr_data", PATH_CLMBR_DATA
                     ]
 
                 if config["overwrite"]:                    
@@ -135,16 +179,29 @@ if __name__ == "__main__":
             
     if args.pretrain is not None:
         """
-        Pretrain using config file.
+        Pretrain CLMBR using config file.
+        Supports multiple hyperparameter settings specified in transformer_config 
+        
+        Example yml config:
+            ```
+            path_to_output_dir: data/clmbr_models/clmbr_sk
+            overwrite: True
+            transformer_config:
+                learning_rate:
+                    - 1e-5
+                    - 1e-4
+                rotary_type: global
+                n_heads: 12
+                n_layers: 12
+                max_iter: 1000000
+            ```
         """
         
-        config = read_yaml(
-            os.path.join(path_root, "configs", args.pretrain)
-        )
+        config = read_yaml(os.path.join(path_root, "configs", args.pretrain))
+        PATH_SCRIPT = os.path.join(path_root, "scripts", "pretrain.py")
+        PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
         
-        path_script = os.path.join(path_root, "scripts", "pretrain.py")
-        
-        # convert items to lists
+        # create hyperparameter grid
         for k,v in config['transformer_config'].items():
             if type(v) == list:
                 continue
@@ -162,8 +219,8 @@ if __name__ == "__main__":
             )
             
             cmd = [
-                "python", path_script,
-                os.path.join(config["path_to_output_dir"], model_name),
+                "python", PATH_SCRIPT,
+                os.path.join(PATH_OUTPUT_DIR, model_name),
             ] + params_list
             
             if config["overwrite"]:
@@ -172,18 +229,30 @@ if __name__ == "__main__":
             subprocess.run(cmd)
             
             
-    if args.finetune is not None:
+    if args.continue_pretrain is not None:
         """
-        Finetune pretrained CLMBR using config file.
+        Continued pretraining of CLMBR using config file.
+        Supports multiple hyperparameter settings specified in transformer_config
+        
+        Example yml config:
+            ```
+            path_to_output_dir: data/clmbr_models/clmbr_stanford_cp
+            path_to_og_clmbr_data: data/clmbr_models/clmbr_stanford
+            overwrite: True
+            transformer_config:
+                learning_rate: 
+                    - 1e-5
+                    - 1e-4
+                max_iter: 1000000
+            ```
         """
+        config = read_yaml(os.path.join(path_root, "configs", args.continue_pretrain))
         
-        config = read_yaml(
-            os.path.join(path_root, "configs", args.finetune)
-        )
+        PATH_SCRIPT = os.path.join(path_root, "scripts", "continue_pretrain.py")
+        PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
+        PATH_OG_CLMBR_DATA = os.path.join(path_root, config["path_to_og_clmbr_data"])
         
-        path_script = os.path.join(path_root, "scripts", "finetune.py")
-        
-        # convert items to lists
+        # create hyperparameter grid
         for k,v in config['transformer_config'].items():
             if type(v) == list:
                 continue
@@ -201,41 +270,53 @@ if __name__ == "__main__":
             )
             
             cmd = [
-                "python", path_script,
-                os.path.join(config["path_to_output_dir"], model_name),
-                "--path_to_og_clmbr_data", config["path_to_og_clmbr_data"],
+                "python", PATH_SCRIPT,
+                os.path.join(PATH_OUTPUT_DIR, model_name),
+                "--path_to_og_clmbr_data", PATH_OG_CLMBR_DATA,
             ] + params_list
             
             if config["overwrite"]:
                 cmd += ["--overwrite"]
-                
-            if config["finetune_last_layer"]:
-                cmd += ["--finetune_last_layer"]
                 
             subprocess.run(cmd)
             
             
     if args.train_adapter is not None:
         """
-        Train adapter model using config file
-        If path is specified, run using all config files. 
-        """
-        config_path = os.path.join(
-            path_root, "configs", args.train_adapter
-        )
+        Train adapter model (linear probe) using config file.
         
-        configs = get_configs(config_path)
-        path_script = os.path.join(path_root, "scripts", "train_adapter.py")
+        Will train multiple adapter models if path_to_labels & path_to_features
+        contain multiple tasks.
+        
+        If args.train_adapter is a path, runs all config files. 
+        
+        Example yml config:
+            ```
+            path_to_output_dir: data/adapter_models/count_sk
+            path_to_labels: data/labels
+            path_to_features: data/features/count_sk
+            feature_type: count
+            overwrite: True
+            ```
+        """
+        PATH_CONFIG = os.path.join(path_root, "configs", args.train_adapter)
+        configs = get_configs(PATH_CONFIG)
         
         for config in configs:
-            available_features = list_dir(config["path_to_features"])
+            PATH_SCRIPT = os.path.join(path_root, "scripts", "train_adapter.py")
+            PATH_FEATURES = os.path.join(path_root, config["path_to_features"])
+            PATH_LABELS = os.path.join(path_root, config["path_to_labels"])
+            PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
+            
+            available_features = list_dir(PATH_FEATURES)
+            
             for features in available_features:
 
                 cmd = [
-                    "python", path_script, 
-                    os.path.join(config["path_to_output_dir"], features),
-                    "--path_to_labels", os.path.join(config["path_to_labels"], features),
-                    "--path_to_features", os.path.join(config["path_to_features"], features),
+                    "python", PATH_SCRIPT, 
+                    os.path.join(PATH_OUTPUT_DIR, features),
+                    "--path_to_labels", os.path.join(PATH_LABELS, features),
+                    "--path_to_features", os.path.join(PATH_FEATURES, features),
                     "--feature_type", config["feature_type"]
                 ]
 
@@ -249,31 +330,50 @@ if __name__ == "__main__":
         """
         Train adapter model with reduced samples using config file
         If path is specified, run using all config files. 
-        """
-        config_path = os.path.join(
-            path_root, "configs", args.train_adapter_few_shots
-        )
         
-        configs = get_configs(config_path)
-        path_script = os.path.join(path_root, "scripts", "train_adapter.py")
+        Example yml config:
+            ```
+            path_to_output_dir: data/adapter_models_few_shots/count_sk
+            path_to_labels: data/labels
+            path_to_features: data/features/count_sk
+            n_iters: 10 
+            train_n: 
+                - 2
+                - 4
+                - 8
+                - 16
+                - 32
+                - 64
+                - 128
+            feature_type: count
+            overwrite: True
+            ```
+        """
+        PATH_CONFIG = os.path.join(path_root, "configs", args.train_adapter_few_shots)
+        configs = get_configs(PATH_CONFIG)
+        
+        PATH_SCRIPT = os.path.join(path_root, "scripts", "train_adapter.py")
         
         for config in configs:
-            available_features = list_dir(config["path_to_features"])
-            for train_n in config['train_n']:
-                
-                if config["path_to_output_dir"][-1] == "/":
-                    config["path_to_output_dir"] = config["path_to_output_dir"][:-1]
-                    
-                for i_iter in range(config["n_iters"]):
-                    path_to_output_dir = config["path_to_output_dir"] + f"_{train_n}_iter{i_iter}"
+            path_features = os.path.join(path_root, config["path_to_features"])
+            path_labels = os.path.join(path_root, config["path_to_labels"])
 
+            if config["path_to_output_dir"][-1] == "/":
+                config["path_to_output_dir"] = config["path_to_output_dir"][:-1]
+
+            path_output_dir = os.path.join(path_root, config["path_to_output_dir"])
+            available_features = list_dir(path_features)
+            
+            for train_n in config['train_n']:
+                for i_iter in range(config["n_iters"]):
+                    output_suffix = f"_{train_n}_iter{i_iter}"
                     for features in available_features:
 
                         cmd = [
-                            "python", path_script, 
-                            os.path.join(path_to_output_dir, features),
-                            "--path_to_labels", os.path.join(config["path_to_labels"], features),
-                            "--path_to_features", os.path.join(config["path_to_features"], features),
+                            "python", PATH_SCRIPT, 
+                            os.path.join(path_output_dir+output_suffix, features),
+                            "--path_to_labels", os.path.join(path_labels, features),
+                            "--path_to_features", os.path.join(path_features, features),
                             "--feature_type", config["feature_type"],
                             "--train_n", str(train_n),
                         ]
@@ -287,36 +387,41 @@ if __name__ == "__main__":
     if args.evaluate_adapter is not None:
         """
         Evaluate adapter model using config file
-        If path is specified, run using all config files. 
+        If args.evaluate_adapter is path, runs all config files. 
+        
+        Example yml config:
+            ```
+            path_to_output_dir: data/evaluate/adapter_models
+            path_to_models: data/adapter_models
+            overwrite: True
+            ```
         """
         
-        config_path = os.path.join(
-            path_root, "configs", args.evaluate_adapter
-        )
-        
+        config_path = os.path.join(path_root, "configs", args.evaluate_adapter)
         configs = get_configs(config_path)
-        path_script = os.path.join(path_root, "scripts", "evaluate_adapter.py")
+        
+        PATH_SCRIPT = os.path.join(path_root, "scripts", "evaluate_adapter.py")
         
         for config in configs:
-            path_to_models = config["path_to_models"]
-            available_models = list_dir(path_to_models)
+            path_models = os.path.join(path_root, config["path_to_models"])
+            available_models = list_dir(path_models)
             
             for model in available_models:
-                available_tasks = list_dir(os.path.join(path_to_models, model))
+                available_tasks = list_dir(os.path.join(path_models, model))
                 
                 for task in available_tasks:
-                    path_to_model = os.path.join(
-                        path_to_models, model, task
+                    path_model = os.path.join(
+                        path_models, model, task
                     )
                     
-                    path_to_output_dir = os.path.join(
-                        config["path_to_output_dir"], model, task
+                    path_output_dir = os.path.join(
+                        path_root, config["path_to_output_dir"], model, task
                     )
                     
                     cmd = [
-                        "python", path_script,
-                        path_to_output_dir,
-                        "--path_to_model", path_to_model,
+                        "python", PATH_SCRIPT,
+                        path_output_dir,
+                        "--path_to_model", path_model,
                     ]
                     
                     if "n_boots" in config:

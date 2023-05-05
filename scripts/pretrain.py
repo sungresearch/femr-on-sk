@@ -7,7 +7,7 @@ import argparse
 
 import numpy as np
 
-from src.utils import read_msgpack
+from src.io import read_msgpack
 from src.default_paths import path_extract
 
 if __name__ == "__main__":
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, required=True)
     parser.add_argument("--rotary_type", type=str, required=True)
     parser.add_argument("--num_batch_threads", type=int, default=3)
-    parser.add_argument("--start_from_checkpoint", type=str)
+    parser.add_argument("--start_from_checkpoint", type=str, default=None)
     parser.add_argument("--token_dropout", type=float, default=0)
     parser.add_argument("--internal_dropout", type=float, default=0)
     parser.add_argument("--weight_decay", type=float, default=0)
@@ -42,6 +42,11 @@ if __name__ == "__main__":
     PATH_DICTIONARY = os.path.join(PATH_TO_OUTPUT_DIR, "dictionary")
     PATH_BATCHES = os.path.join(PATH_TO_OUTPUT_DIR, "clmbr_batches")
     PATH_MODEL = os.path.join(PATH_TO_OUTPUT_DIR, "clmbr_model")
+    
+    print(f"\n\
+    output_dir: {PATH_TO_OUTPUT_DIR}\n\
+    path_to_patient_database: {PATH_TO_PATIENT_DATABASE}\n\
+    ")
     
     os.makedirs(PATH_TO_OUTPUT_DIR, exist_ok=True)
     

@@ -10,7 +10,9 @@ import numpy as np
 
 from typing import Dict, Callable
 from sklearn.metrics import roc_auc_score, average_precision_score
-from src.utils import save_to_pkl, read_pkl, load_features, hash_pids
+
+from src.io import save_to_pkl, read_pkl, read_features
+from src.utils import hash_pids
 
 """
 TODO: add expected calibration error
@@ -44,27 +46,9 @@ def run_bootstrap(
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Evaluate adapter model")
-    
-    parser.add_argument(
-        "path_to_output_dir",
-        type=str,
-        help=("Path to save models"
-        ),
-    )
-    
-    parser.add_argument(
-        "--path_to_model",
-        type=str,
-        help="Path to adapter model",
-    )
-    
-    parser.add_argument(
-        "--n_boots",
-        type=int,
-        default=None,
-        help="number of iterations for bootstrapping",
-    )
-
+    parser.add_argument("path_to_output_dir", type=str)
+    parser.add_argument("--path_to_model", type=str)
+    parser.add_argument("--n_boots", type=int, default=None, help="num bootstrap iterations")
     parser.add_argument('--overwrite', action='store_true')
     args = parser.parse_args()
     
@@ -79,50 +63,51 @@ if __name__ == "__main__":
     if args.overwrite and os.path.exists(args.path_to_output_dir):
         shutil.rmtree(args.path_to_output_dir, ignore_errors=True)
         
-    os.makedirs(args.path_to_output_dir, exist_ok=True)
-    
-    # load model and metadata
-    print("loading model and metadata")
-    m = read_pkl(os.path.join(args.path_to_model, "model.pkl"))
-    m_info = read_pkl(os.path.join(args.path_to_model, "model_info.pkl"))
-    
-    # load features    
-    print("loading features")
-    X_test, y_test = load_features(
-        m_info['path_to_patient_database'],
-        m_info['path_to_features'],
-        m_info['path_to_labels'],
-        m_info['feature_type'],
-        is_eval=True,
-    )
-    
-    preds = m.predict_proba(X_test)[:,1]
-                                    
-    # evaluate
-    results = {
-        "labels": y_test,
-        "predictions": preds,
-        "model": m,
-    }
-    
-    print("evaluating model")
-    for metric in metrics:
-        results[metric] = metrics[metric](y_test, preds)
-    
-    if args.n_boots is not None:
-        print(f"evaluating using {args.n_boot} bootstrap iterations")
-        boot_results = run_bootstrap(
-            y_test,
-            preds,
-            metrics,
-            args.n_boots,
+    if not os.path.exists(args.path_to_output_dir):
+        os.makedirs(args.path_to_output_dir, exist_ok=True)
+
+        # load model and metadata
+        print("loading model and metadata")
+        m = read_pkl(os.path.join(args.path_to_model, "model.pkl"))
+        m_info = read_pkl(os.path.join(args.path_to_model, "model_info.pkl"))
+
+        # load features    
+        print("loading features")
+        X_test, y_test = read_features(
+            m_info['path_to_patient_database'],
+            m_info['path_to_features'],
+            m_info['path_to_labels'],
+            m_info['feature_type'],
+            is_eval=True,
         )
-        
-        results = {**results, **boot_results}
-    
-    # save
-    print("saving results")
-    save_to_pkl(results, os.path.join(args.path_to_output_dir, "results.pkl"))
-    
-    t_end = int(time.time()-START_TIME)
-    print(f"finished in {t_end} seconds")
+
+        preds = m.predict_proba(X_test)[:,1]
+
+        # evaluate
+        results = {
+            "labels": y_test,
+            "predictions": preds,
+            "model": m,
+        }
+
+        print("evaluating model")
+        for metric in metrics:
+            results[metric] = metrics[metric](y_test, preds)
+
+        if args.n_boots is not None:
+            print(f"evaluating using {args.n_boot} bootstrap iterations")
+            boot_results = run_bootstrap(
+                y_test,
+                preds,
+                metrics,
+                args.n_boots,
+            )
+
+            results = {**results, **boot_results}
+
+        # save
+        print("saving results")
+        save_to_pkl(results, os.path.join(args.path_to_output_dir, "results.pkl"))
+
+        t_end = int(time.time()-START_TIME)
+        print(f"finished in {t_end} seconds")

@@ -1,10 +1,9 @@
-path_to_labels: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/labels
-path_to_output_dir: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/features/count_sk
+path_to_labels: data/labels
+path_to_output_dir: data/features/count_sk
 overwrite: True
 
 featurizer_config:
     type: count
     num_threads: 4
-    ontology_expansion: True
     
    

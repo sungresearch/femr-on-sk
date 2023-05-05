@@ -11,12 +11,20 @@ from typing import List
 
 from femr.featurizers import FeaturizerList
 from femr.featurizers.featurizers import AgeFeaturizer, CountFeaturizer
-from src.utils import save_to_pkl, read_pkl, read_msgpack
+from src.io import save_to_pkl, read_pkl, read_msgpack
 from src.default_paths import path_extract
 
 def run_count_featurizers(args):
     """
-    Featurize using count-based featurizers
+    Featurize using count-based featurizers.
+    Default settings for count featurizer:
+        is_ontology_expansion=True
+        time_bins=[
+            datetime.timedelta(days=1), 
+            datetime.timedelta(days=7),
+            datetime.timedelta(days=36500),
+        ]
+        numeric_value_decile=True
     """
     PATH_TO_PATIENT_DATABASE: str = path_extract
     PATH_TO_OUTPUT_DIR: str = args.path_to_output_dir
@@ -39,7 +47,7 @@ def run_count_featurizers(args):
     
     age = AgeFeaturizer()
     count = CountFeaturizer(
-        is_ontology_expansion=args.ontology_expansion,
+        is_ontology_expansion=True,
         time_bins=[
             datetime.timedelta(days=1), 
             datetime.timedelta(days=7),
@@ -148,37 +156,25 @@ def run_clmbr_featurizer(args):
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Run featurizer")
-    parser.add_argument(
-        "path_to_output_dir",
-        type=str,
-        help=("Path to save features"
-        ),
-    )
-
-    parser.add_argument(
-        "--path_to_labels",
-        type=str,
-        help="Path to labels.",
-    )
-
-    parser.add_argument('--overwrite', action='store_true')
+    parser.add_argument("path_to_output_dir", type=str)
+    parser.add_argument("--path_to_labels", type=str)
+    parser.add_argument('--overwrite', default=False, action='store_true')
     
     # arguments for count-based featurizer
-    parser.add_argument("--count", action="store_true")
-    
-    parser.add_argument(
-        "--num_threads",
-        type=int,
-        help="The number of threads to use for count featurizer",
-        default=1,
-    )
-    
-    parser.add_argument("--ontology_expansion", default=False, action="store_true")
+    parser.add_argument("--count", default=False, action="store_true")
+    parser.add_argument("--num_threads", type=int, default=1)
     
     # arguments for CLMBR featurizer
-    parser.add_argument("--clmbr", action="store_true")
+    parser.add_argument("--clmbr", default=False, action="store_true")
     parser.add_argument("--path_to_clmbr_data", type=str, default=None)
-    parser.add_argument("--force_use_extract", type=str, default=None)
+    
+    parser.add_argument(
+        "--force_use_extract", 
+        type=str, 
+        default=None,
+        help="For sanity check. Use another extract than specified in default_paths"
+    )
+    
     args = parser.parse_args()
     
     if args.count:

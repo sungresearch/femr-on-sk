@@ -1,5 +1,5 @@
-path_to_output_dir: /hpf/projects/lsung/projects/lguo/femr-on-sk/data/clmbr_models/clmbr_sk
-overwrite: True
+path_to_output_dir: data/clmbr_models/clmbr_sk
+overwrite: False
 transformer_config:
     learning_rate:
         - 1e-5
