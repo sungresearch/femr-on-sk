@@ -4,3 +4,5 @@
 data/*
 logs/*
 *sandbox*
+*sanity_check*
+*backup*
