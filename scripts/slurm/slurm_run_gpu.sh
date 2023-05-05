@@ -8,11 +8,11 @@
 #SBATCH --mem=64000 # in MegaBytes. default is 8 GB
 #SBATCH --gpus=1
 #SBATCH --constraint="AlmaLinux8"
-#SBATCH --error=/hpf/projects/lsung/projects/lguo/femr-on-sk/logs/error-sbatchjob.%J.err
-#SBATCH --output=/hpf/projects/lsung/projects/lguo/femr-on-sk/logs/out-sbatchjob.%J.out
+#SBATCH --error=/hpf/projects/lsung/phi/projects/lguo/femr-on-sk/logs/error-sbatchjob.%J.err
+#SBATCH --output=/hpf/projects/lsung/phi/projects/lguo/femr-on-sk/logs/out-sbatchjob.%J.out
 
 source activate /hpf/projects/lsung/envs/lguo/femr
-cd /hpf/projects/lsung/projects/lguo/femr-on-sk/scripts
+cd /hpf/projects/lsung/phi/projects/lguo/femr-on-sk/scripts
 
 ## pretrain CLMBR_SK
 #python run.py --pretrain="pretrain/sk.yml"
@@ -29,4 +29,4 @@ cd /hpf/projects/lsung/projects/lguo/femr-on-sk/scripts
 #python run.py --finetune="finetune/clmbr_stanford.yml"
 
 ## two-step finetune CLMBR_STANFORD
-python run.py --finetune="finetune/clmbr_stanford_two_step.yml"
+#python run.py --finetune="finetune/clmbr_stanford_two_step.yml"

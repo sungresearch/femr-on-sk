@@ -7,11 +7,11 @@
 #SBATCH -n 24 #number of cores to reserve, default is 1
 #SBATCH --mem=32000 # in MegaBytes. default is 8 GB
 #SBATCH --constraint="AlmaLinux8"
-#SBATCH --error=/hpf/projects/lsung/projects/lguo/femr-on-sk/logs/error-sbatchjob.%J.err
-#SBATCH --output=/hpf/projects/lsung/projects/lguo/femr-on-sk/logs/out-sbatchjob.%J.out
+#SBATCH --error=/hpf/projects/lsung/phi/projects/lguo/femr-on-sk/logs/error-sbatchjob.%J.err
+#SBATCH --output=/hpf/projects/lsung/phi/projects/lguo/femr-on-sk/logs/out-sbatchjob.%J.out
 
 source activate /hpf/projects/lsung/envs/lguo/femr
-cd /hpf/projects/lsung/projects/lguo/femr-on-sk/scripts
+cd /hpf/projects/lsung/phi/projects/lguo/femr-on-sk/scripts
 
 ## run labelers
 #python run.py --label="label.yml"
