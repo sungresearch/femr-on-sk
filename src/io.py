@@ -50,6 +50,7 @@ def read_features(
     is_eval: bool = False,
     train_perc: Optional[int] = 85,
     train_n: Optional[int] = None,
+    return_patient_ids: bool = False,
 ):
     """
     Load features and labels for training and evaluation of adapter models.
@@ -114,6 +115,10 @@ def read_features(
         np.random.shuffle(y_index)
 
         y = y[y_index]
-        X = X[y_index]
+        X = X[y_index, :]
+        sel_pids = sel_pids[y_index]
 
-    return (X, y)
+    if return_patient_ids:
+        return (X, y, sel_pids)
+    else:
+        return (X, y)

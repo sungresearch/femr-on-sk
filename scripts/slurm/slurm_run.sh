@@ -20,4 +20,5 @@ cd /hpf/projects/lsung/phi/projects/lguo/femr-on-sk/scripts
 #python run.py --featurize="featurize/count.yml"
 python run.py --train_adapter="train_adapter"
 python run.py --train_adapter_few_shots="train_adapter_few_shots"
-python run.py --evaluate_adapter="evaluate_adapter"
+python run.py --evaluate="evaluate/adapter_models.yml"
+python run.py --evaluate="evaluate/adapter_models_few_shots.yml"

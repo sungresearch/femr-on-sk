@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--finetune", type=str, default=None)
     parser.add_argument("--train_adapter", type=str, default=None)
     parser.add_argument("--train_adapter_few_shots", type=str, default=None)
-    parser.add_argument("--evaluate_adapter", type=str, default=None)
+    parser.add_argument("--evaluate", type=str, default=None)
 
     args = parser.parse_args()
 
@@ -432,7 +432,7 @@ if __name__ == "__main__":
 
                         subprocess.run(cmd)
 
-    if args.evaluate_adapter is not None:
+    if args.evaluate is not None:
         """
         Evaluate adapter model using config file
         If args.evaluate_adapter is path, runs all config files.
@@ -445,10 +445,10 @@ if __name__ == "__main__":
             ```
         """
 
-        config_path = os.path.join(path_root, "configs", args.evaluate_adapter)
+        config_path = os.path.join(path_root, "configs", args.evaluate)
         configs = get_configs(config_path)
 
-        PATH_SCRIPT = os.path.join(path_root, "scripts", "evaluate_adapter.py")
+        PATH_SCRIPT = os.path.join(path_root, "scripts", "evaluate.py")
 
         for config in configs:
             path_models = os.path.join(path_root, config["path_to_models"])
@@ -474,6 +474,9 @@ if __name__ == "__main__":
 
                     if "n_boots" in config:
                         cmd += ["--n_boots", config["n_boots"]]
+
+                    if "model_type" in config:
+                        cmd += ["--model_type", config["model_type"]]
 
                     if config["overwrite"]:
                         cmd += ["--overwrite"]
