@@ -25,8 +25,8 @@ cd /hpf/projects/lsung/phi/projects/lguo/femr-on-sk/scripts
 #python run.py --continue_pretrain="continue_pretrain/stanford.yml"
 #python run.py --featurize="featurize/clmbr_stanford_cp.yml"
 
-## finetune CLMBR_STANFORD
-#python run.py --finetune="finetune/clmbr_stanford.yml"
+## finetune
+python run.py --finetune="finetune/clmbr_sk.yml"
 
-## two-step finetune CLMBR_STANFORD
-#python run.py --finetune="finetune/clmbr_stanford_two_step.yml"
+# evaluate fine-tune (clmbr_task) models
+#python run.py --evaluate="evaluate/clmbr_task_models.yml"

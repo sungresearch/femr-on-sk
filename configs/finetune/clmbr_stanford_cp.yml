@@ -1,0 +1,10 @@
+path_to_output_dir: data/clmbr_finetuned/clmbr_stanford_cp
+path_to_clmbr_data: data/clmbr_models/clmbr_stanford_cp/CLMBR_learning_rate_1e-5_max_iter_1000000
+path_to_labels: data/labels
+path_to_linear_probe: data/linear_probes/clmbr_stanford_cp
+overwrite: True
+transformer_config:
+    learning_rate:
+        - 1e-5
+        - 1e-6
+    max_iter: 1000000

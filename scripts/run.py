@@ -14,12 +14,7 @@ import os
 from sklearn.model_selection import ParameterGrid
 from src.io import read_yaml
 from src.default_paths import path_root
-
-
-def list_dir(path: str):
-    """get list of file/directory names excluding nb checkpoints"""
-
-    return [x for x in os.listdir(path) if x != ".ipynb_checkpoints"]
+from src.utils import list_dir
 
 
 def get_configs(config_path: str):
@@ -42,6 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("--featurize", type=str, default=None)
     parser.add_argument("--pretrain", type=str, default=None)
     parser.add_argument("--continue_pretrain", type=str, default=None)
+    parser.add_argument("--linear_probe", type=str, default=None)
     parser.add_argument("--finetune", type=str, default=None)
     parser.add_argument("--train_adapter", type=str, default=None)
     parser.add_argument("--train_adapter_few_shots", type=str, default=None)
@@ -268,61 +264,84 @@ if __name__ == "__main__":
 
             subprocess.run(cmd)
 
+    if args.linear_probe is not None:
+        """
+        trains a linear probe on top of a frozen CLMBR
+
+        Will train linear probe for each task defined in path_to_labels,
+        and will run all config files in the config folder
+        """
+
+        PATH_CONFIG = os.path.join(path_root, "configs", args.linear_probe)
+        configs = get_configs(PATH_CONFIG)
+
+        for config in configs:
+            PATH_SCRIPT = os.path.join(path_root, "scripts", "linear_probe.py")
+            PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
+            PATH_OG_CLMBR_DATA = os.path.join(path_root, config["path_to_clmbr_data"])
+            PATH_LABELS = os.path.join(path_root, config["path_to_labels"])
+
+            available_tasks = list_dir(PATH_LABELS)
+
+            for task in available_tasks:
+                cmd = [
+                    "python",
+                    PATH_SCRIPT,
+                    os.path.join(PATH_OUTPUT_DIR, task),
+                    "--path_to_labels",
+                    os.path.join(PATH_LABELS, task),
+                    "--path_to_clmbr_data",
+                    PATH_OG_CLMBR_DATA,
+                ]
+
+                if config["overwrite"]:
+                    cmd += ["--overwrite"]
+
+                subprocess.run(cmd)
+
     if args.finetune is not None:
         """
-        (Task-specific) fine-tuning of CLMBR using config file. Also supports two-step finetuning
-        proposed in https://arxiv.org/abs/2202.10054
+        fine-tuning of CLMBR as proposed in https://arxiv.org/abs/2202.10054
 
-        Important: the finetuning step assumes that you have used the og CLMBR model
-        to generate features already for task-specific adapter training (linear-probing),
-        because the feature generation step creates the task batches.
+        Important: the finetuning step assumes that you have finished the linear_probing
+        step.
 
         Will train multiple fine-tuned models if path_to_task_batches contain multiple
         tasks.
-
-        Example yml config:
-            ```
-            path_to_output_dir: data/clmbr_models/clmbr_stanford_ft
-            path_to_og_clmbr_data: data/clmbr_models/clmbr_stanford
-            path_to_task_batches: data/features/clmbr_stanford
-            overwrite: False
-            two_step_finetuning: False
-            transformer_config:
-                learning_rate: 1e-5
-                max_iter: 1000000
-            ```
         """
-        config = read_yaml(os.path.join(path_root, "configs", args.finetune))
+        PATH_CONFIG = os.path.join(path_root, "configs", args.finetune)
+        configs = get_configs(PATH_CONFIG)
 
-        PATH_SCRIPT = os.path.join(path_root, "scripts", "finetune.py")
-        PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
-        PATH_OG_CLMBR_DATA = os.path.join(path_root, config["path_to_og_clmbr_data"])
-        PATH_TASK_BATCHES = os.path.join(path_root, config["path_to_task_batches"])
+        for config in configs:
+            PATH_SCRIPT = os.path.join(path_root, "scripts", "finetune.py")
+            PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
+            PATH_OG_CLMBR_DATA = os.path.join(path_root, config["path_to_clmbr_data"])
+            PATH_LABELS = os.path.join(path_root, config["path_to_labels"])
 
-        available_tasks = list_dir(PATH_TASK_BATCHES)
+            available_tasks = list_dir(PATH_LABELS)
 
-        for task in available_tasks:
-            cmd = [
-                "python",
-                PATH_SCRIPT,
-                os.path.join(PATH_OUTPUT_DIR, task),
-                "--path_to_task_batches",
-                os.path.join(PATH_TASK_BATCHES, task, "task_batches"),
-                "--path_to_og_clmbr_data",
-                PATH_OG_CLMBR_DATA,
-                "--learning_rate",
-                str(config["transformer_config"]["learning_rate"]),
-                "--max_iter",
-                str(config["transformer_config"]["max_iter"]),
-            ]
+            for task in available_tasks:
+                for lr in config["transformer_config"]["learning_rate"]:
+                    cmd = [
+                        "python",
+                        PATH_SCRIPT,
+                        os.path.join(PATH_OUTPUT_DIR, task, str(lr)),
+                        "--path_to_labels",
+                        os.path.join(PATH_LABELS, task),
+                        "--path_to_clmbr_data",
+                        PATH_OG_CLMBR_DATA,
+                        "--learning_rate",
+                        str(lr),
+                        "--max_iter",
+                        str(config["transformer_config"]["max_iter"]),
+                        "--path_to_linear_probe",
+                        os.path.join(path_root, config["path_to_linear_probe"], task),
+                    ]
 
-            if "two_step_finetuning" in config and config["two_step_finetuning"]:
-                cmd += ["--two_step_finetuning"]
+                    if config["overwrite"]:
+                        cmd += ["--overwrite"]
 
-            if config["overwrite"]:
-                cmd += ["--overwrite"]
-
-            subprocess.run(cmd)
+                    subprocess.run(cmd)
 
     if args.train_adapter is not None:
         """

@@ -5,6 +5,7 @@ import pickle
 import warnings
 
 import numpy as np
+from femr.labelers import load_labeled_patients
 from typing import Optional
 from src.utils import hash_pids
 
@@ -48,12 +49,15 @@ def read_features(
     feature_type: str,
     is_train: bool = False,
     is_eval: bool = False,
-    train_perc: Optional[int] = 85,
     train_n: Optional[int] = None,
     return_patient_ids: bool = False,
 ):
     """
     Load features and labels for training and evaluation of adapter models.
+
+    Train: [min, 70)
+    Val: [70, 85)
+    Test: [85, max]
 
     When train_n is specified (e.g., for few_shot experiments), balanced sampling
     is additionally conducted to obtain the labels (and corresponding features).
@@ -64,17 +68,10 @@ def read_features(
     if not is_train and not is_eval:
         raise ValueError("Must specify true for one of is_train or is_eval")
 
-    if is_train and train_perc is None:
-        raise ValueError("Must specify either train_perc (default uses 85)")
+    VAL_START = 70
+    TEST_START = 85
 
-    if train_perc is not None and train_perc > 85:
-        raise ValueError(
-            "You specified over 85% of patients for training, which can cause data leakage"
-        )
-
-    TEST_SPLIT = 85
-
-    labels_object = read_pkl(path_to_labels)
+    labels_object = load_labeled_patients(path_to_labels)
     features = read_pkl(path_to_features)
 
     if feature_type == "clmbr":
@@ -87,38 +84,55 @@ def read_features(
     # get hashed patient IDs to generate splits
     hashed_pids = hash_pids(path_to_patient_database, patient_ids)
 
-    if is_train:
-        sel_pids_idx = np.where(hashed_pids < train_perc)[0]
-
     if is_eval:
-        sel_pids_idx = np.where(hashed_pids >= TEST_SPLIT)[0]
-
-    sel_pids = patient_ids[sel_pids_idx]
-    X = feature_matrix[sel_pids_idx, :]
-    y = np.array(
-        [labels_object.get_labels_from_patient_idx(x)[0].value for x in sel_pids]
-    )
-
-    if is_train and train_n is not None:
-        y_pos = np.where(y == 1)[0]
-        y_neg = np.where(y == 0)[0]
-
-        if len(y_pos) < train_n / 2 or len(y_neg) < train_n / 2:
-            warnings.warn(f"Number of samples in one class is < {train_n/2}")
-
-        y_index = np.concatenate(
-            (
-                np.random.choice(y_pos, min(int(train_n / 2), len(y_pos))),
-                np.random.choice(y_neg, min(int(train_n / 2), len(y_neg))),
-            )
+        sel_pids_idx = np.where(hashed_pids >= TEST_START)[0]
+        sel_pids = patient_ids[sel_pids_idx]
+        X = feature_matrix[sel_pids_idx, :]
+        y = np.array(
+            [labels_object.get_labels_from_patient_idx(x)[0].value for x in sel_pids]
         )
-        np.random.shuffle(y_index)
 
-        y = y[y_index]
-        X = X[y_index, :]
-        sel_pids = sel_pids[y_index]
+        if return_patient_ids:
+            return (X, y, sel_pids)
+        else:
+            return (X, y)
 
-    if return_patient_ids:
-        return (X, y, sel_pids)
-    else:
-        return (X, y)
+    if is_train:
+        train_idx = np.where(hashed_pids < VAL_START)[0]
+        val_idx = np.where((hashed_pids >= VAL_START) & (hashed_pids < TEST_START))[0]
+
+        train_pids = patient_ids[train_idx]
+        X_train = feature_matrix[train_idx, :]
+        y_train = np.array(
+            [labels_object.get_labels_from_patient_idx(x)[0].value for x in train_pids]
+        )
+
+        val_pids = patient_ids[val_idx]
+        X_val = feature_matrix[val_idx, :]
+        y_val = np.array(
+            [labels_object.get_labels_from_patient_idx(x)[0].value for x in val_pids]
+        )
+
+        if train_n is not None:
+            y_pos = np.where(y_train == 1)[0]
+            y_neg = np.where(y_train == 0)[0]
+
+            if len(y_pos) < train_n / 2 or len(y_neg) < train_n / 2:
+                warnings.warn(f"Number of samples in one class is < {train_n/2}")
+
+            y_index = np.concatenate(
+                (
+                    np.random.choice(y_pos, min(int(train_n / 2), len(y_pos))),
+                    np.random.choice(y_neg, min(int(train_n / 2), len(y_neg))),
+                )
+            )
+            np.random.shuffle(y_index)
+
+            y_train = y_train[y_index]
+            X_train = X_train[y_index, :]
+            train_pids = train_pids[y_index]
+
+        if return_patient_ids:
+            return (X_train, y_train, train_pids, X_val, y_val, val_pids)
+        else:
+            return (X_train, y_train, X_val, y_val)

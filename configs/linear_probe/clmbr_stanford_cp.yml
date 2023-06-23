@@ -1,0 +1,4 @@
+path_to_output_dir: data/linear_probes/clmbr_stanford_cp
+path_to_clmbr_data: data/clmbr_models/clmbr_stanford_cp/CLMBR_learning_rate_1e-5_max_iter_1000000
+path_to_labels: data/labels
+overwrite: True

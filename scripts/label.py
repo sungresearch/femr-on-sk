@@ -128,9 +128,7 @@ if __name__ == "__main__":
         num_threads=NUM_THREADS,
     )
 
-    save_to_pkl(
-        labeled_patients, os.path.join(PATH_TO_OUTPUT_DIR, "labeled_patients.pkl")
-    )
+    labeled_patients.save(os.path.join(PATH_TO_OUTPUT_DIR, "labeled_patients.csv"))
 
     time_elapsed = int(time.time() - START_TIME)
     print(f"Finished in {time_elapsed} seconds")

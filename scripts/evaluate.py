@@ -21,6 +21,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 
 from src.io import save_to_pkl, read_pkl, read_features
 from src.default_paths import path_extract
+from src.utils import hash_pids
 
 """
 TODO: add expected calibration error
@@ -57,6 +58,31 @@ def get_logistic_regression_results(args):
         "labels": y_test,
         "predictions": preds,
         "patient_ids": pids,
+    }
+
+    return results
+
+
+def get_linear_probe_results(args):
+    path_to_results = os.path.join(args.path_to_model, "model/predictions.pkl")
+
+    (predictions, label_pids, label_values, prediction_dates) = read_pkl(
+        path_to_results
+    )
+
+    hashed_pids = hash_pids(path_extract, label_pids)
+    test_idx = np.where(hashed_pids >= 85)
+
+    test_pids = label_pids[test_idx]
+    test_preds = predictions[test_idx]
+    test_labels = label_values[test_idx]
+
+    results = {
+        "data_path": path_extract,
+        "model": args.path_to_model,
+        "labels": test_labels,
+        "predictions": test_preds,
+        "patient_ids": test_pids,
     }
 
     return results
@@ -180,7 +206,7 @@ if __name__ == "__main__":
         "--model_type",
         type=str,
         default="logistic_regression",
-        help="logistic_regression/clmbr_task_model",
+        help="logistic_regression/linear_probe/clmbr_task_model",
     )
 
     parser.add_argument(
@@ -209,6 +235,9 @@ if __name__ == "__main__":
         # load model and metadata
         if args.model_type == "logistic_regression":
             results = get_logistic_regression_results(args)
+
+        elif args.model_type == "linear_probe":
+            results = get_linear_probe_results(args)
 
         elif args.model_type == "clmbr_task_model":
             results = get_clmbr_task_model_results(args)

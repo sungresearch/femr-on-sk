@@ -1,0 +1,4 @@
+path_to_output_dir: data/evaluate/linear_probes
+path_to_models: data/linear_probes
+model_type: "linear_probe"
+overwrite: True

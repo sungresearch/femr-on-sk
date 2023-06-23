@@ -1,0 +1,10 @@
+path_to_output_dir: data/clmbr_finetuned/clmbr_sk
+path_to_clmbr_data: data/clmbr_models/clmbr_sk/CLMBR_learning_rate_1e-5_max_iter_1000000_n_heads_12_n_layers_12_rotary_type_global
+path_to_labels: data/labels
+path_to_linear_probe: data/linear_probes/clmbr_sk
+overwrite: True
+transformer_config:
+    learning_rate:
+        - 1e-5
+        - 1e-6
+    max_iter: 1000000

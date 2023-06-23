@@ -1,0 +1,4 @@
+path_to_output_dir: data/linear_probes/clmbr_sk
+path_to_clmbr_data: data/clmbr_models/clmbr_sk/CLMBR_learning_rate_1e-5_max_iter_1000000_n_heads_12_n_layers_12_rotary_type_global
+path_to_labels: data/labels
+overwrite: True

@@ -7,7 +7,8 @@ import subprocess
 
 from femr.featurizers import FeaturizerList
 from femr.featurizers.featurizers import AgeFeaturizer, CountFeaturizer
-from src.io import save_to_pkl, read_pkl, read_msgpack
+from femr.labelers import load_labeled_patients
+from src.io import save_to_pkl, read_msgpack
 from src.default_paths import path_extract
 
 
@@ -58,7 +59,9 @@ def run_count_featurizers(args):
 
     # Preprocess featurizer
     print("Preprocessing featurizer")
-    labeled_patients = read_pkl(os.path.join(PATH_TO_LABELS, "labeled_patients.pkl"))
+    labeled_patients = load_labeled_patients(
+        os.path.join(PATH_TO_LABELS, "labeled_patients.csv")
+    )
 
     featurizers.preprocess_featurizers(
         PATH_TO_PATIENT_DATABASE, labeled_patients, NUM_THREADS
@@ -130,9 +133,11 @@ def run_clmbr_featurizer(args):
             "--task",
             "labeled_patients",
             "--labeled_patients_path",
-            os.path.join(PATH_TO_LABELS, "labeled_patients.pkl"),
+            os.path.join(PATH_TO_LABELS, "labeled_patients.csv"),
             "--transformer_vocab_size",
             str(vocab_size),
+            "--val_start",
+            str(70),
         ]
 
         subprocess.run(cmd)

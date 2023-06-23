@@ -102,6 +102,10 @@ if __name__ == "__main__":
                 str(vocab_size),
                 "--task",
                 "clmbr",
+                "--val_start",
+                "70",
+                "--test_start",
+                "85",
             ]
         )
 
