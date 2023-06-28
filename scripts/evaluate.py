@@ -21,7 +21,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 
 from src.io import save_to_pkl, read_pkl, read_features
 from src.default_paths import path_extract
-from src.utils import hash_pids
+from src.utils import hash_pids, get_best_clmbr_model
 
 """
 TODO: add expected calibration error
@@ -33,7 +33,7 @@ metrics = {
 }
 
 
-def get_logistic_regression_results(args):
+def get_adapter_model_results(args):
     print("loading model and metadata")
     m = read_pkl(os.path.join(args.path_to_model, "model.pkl"))
     m_info = read_pkl(os.path.join(args.path_to_model, "model_info.pkl"))
@@ -89,17 +89,20 @@ def get_linear_probe_results(args):
 
 
 def get_clmbr_task_model_results(args):
-    model_dir = os.path.join(args.path_to_model, "clmbr_model")
-    batches_path = os.path.join(args.path_to_model, "task_batches")
+    best_model = get_best_clmbr_model(args.path_to_model)
+    clmbr_data_path = os.path.join(args.path_to_model, best_model)
+    model_path = os.path.join(clmbr_data_path, "clmbr_model")
+    batch_info_path = os.path.join(
+        clmbr_data_path, "task_batches", "batch_info.msgpack"
+    )
 
     print("loading model and batches")
-    with open(os.path.join(model_dir, "config.msgpack"), "rb") as f:
+    with open(os.path.join(model_path, "config.msgpack"), "rb") as f:
         config = msgpack.load(f, use_list=False)
 
     random.seed(config["seed"])
 
     config = hk.data_structures.to_immutable_dict(config)
-    batch_info_path = os.path.join(batches_path, "batch_info.msgpack")
 
     loader = femr.extension.dataloader.BatchLoader(path_extract, batch_info_path)
 
@@ -113,7 +116,7 @@ def get_clmbr_task_model_results(args):
     rng = jax.random.PRNGKey(42)
     model = hk.transform(model_fn)
 
-    with open(os.path.join(model_dir, "best"), "rb") as f:
+    with open(os.path.join(model_path, "best"), "rb") as f:
         params = pickle.load(f)
 
     def compute_logits(params, rng, config, batch):
@@ -169,7 +172,7 @@ def get_clmbr_task_model_results(args):
 
     result = {
         "data_path": path_extract,
-        "model": model_dir,
+        "model": model_path,
         "labels": np.array(labels),
         "predictions": np.array(jax.nn.sigmoid(np.array(all_logits))),
         "patient_ids": np.array(label_pids),
@@ -187,14 +190,22 @@ def run_bootstrap(
     results = {metric + "_bootstrap": [] for metric, _ in metrics.items()}
     n_samples = len(labels)
     np.random.seed(97)
+    errs = 0
 
     for i in range(n_boots):
         ids = np.random.choice(n_samples, n_samples)
 
         for metric in metrics:
-            results[metric + "_bootstrap"].append(
-                metrics[metric](labels[ids], preds[ids])
-            )
+            try:
+                results[metric + "_bootstrap"].append(
+                    metrics[metric](labels[ids], preds[ids])
+                )
+            except TypeError:
+                results[metric + "_bootstrap"].append(np.nan)
+                errs += 1
+
+    print(f"{errs} bootstrap iterations errored out, likely due to insufficient y=1")
+    return results
 
 
 if __name__ == "__main__":
@@ -205,8 +216,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_type",
         type=str,
-        default="logistic_regression",
-        help="logistic_regression/linear_probe/clmbr_task_model",
+        default="adapter_model",
+        help="adapter_model/linear_probe/clmbr_task_model",
     )
 
     parser.add_argument(
@@ -233,8 +244,8 @@ if __name__ == "__main__":
         os.makedirs(args.path_to_output_dir, exist_ok=True)
 
         # load model and metadata
-        if args.model_type == "logistic_regression":
-            results = get_logistic_regression_results(args)
+        if args.model_type == "adapter_model":
+            results = get_adapter_model_results(args)
 
         elif args.model_type == "linear_probe":
             results = get_linear_probe_results(args)
@@ -244,7 +255,7 @@ if __name__ == "__main__":
 
         else:
             raise ValueError(
-                "`model_type` must be either 'logistic_regression' or 'clmbr_task_model'"
+                "`model_type` must be either 'adapter_model' or 'clmbr_task_model' or 'linear_probe'"
             )
 
         print("evaluating model")
@@ -252,7 +263,8 @@ if __name__ == "__main__":
             results[metric] = metrics[metric](results["labels"], results["predictions"])
 
         if args.n_boots is not None:
-            print(f"evaluating using {args.n_boot} bootstrap iterations")
+            print(f"evaluating using {args.n_boots} bootstrap iterations")
+
             boot_results = run_bootstrap(
                 results["labels"],
                 results["predictions"],

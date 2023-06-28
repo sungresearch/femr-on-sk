@@ -388,6 +388,12 @@ if __name__ == "__main__":
                 if config["overwrite"]:
                     cmd += ["--overwrite"]
 
+                if "scale_features" in config and config["scale_features"]:
+                    cmd += ["--scale_features"]
+
+                if "model" in config:
+                    cmd += ["--model", config["model"]]
+
                 subprocess.run(cmd)
 
     if args.train_adapter_few_shots is not None:
@@ -449,6 +455,12 @@ if __name__ == "__main__":
                         if config["overwrite"]:
                             cmd += ["--overwrite"]
 
+                        if "scale_features" in config and config["scale_features"]:
+                            cmd += ["--scale_features"]
+
+                        if "model" in config:
+                            cmd += ["--model", config["model"]]
+
                         subprocess.run(cmd)
 
     if args.evaluate is not None:
@@ -492,7 +504,7 @@ if __name__ == "__main__":
                     ]
 
                     if "n_boots" in config:
-                        cmd += ["--n_boots", config["n_boots"]]
+                        cmd += ["--n_boots", str(config["n_boots"])]
 
                     if "model_type" in config:
                         cmd += ["--model_type", config["model_type"]]

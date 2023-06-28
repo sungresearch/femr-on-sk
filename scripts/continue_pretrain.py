@@ -101,17 +101,17 @@ if __name__ == "__main__":
             "--internal_dropout",
             str(model_config["internal_dropout"]),
             "--n_heads",
-            model_config["n_heads"],
+            str(model_config["n_heads"]),
             "--n_layers",
-            model_config["n_layers"],
+            str(model_config["n_layers"]),
             "--attention_width",
-            model_config["attention_width"],
+            str(model_config["attention_width"]),
             "--num_batch_threads",
             str(args.num_batch_threads),
             "--hidden_size",
-            model_config["hidden_size"],
+            str(model_config["hidden_size"]),
             "--intermediate_size",
-            model_config["intermediate_size"],
+            str(model_config["intermediate_size"]),
         ]
 
         subprocess.run(cmd)

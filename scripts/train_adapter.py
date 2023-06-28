@@ -5,7 +5,11 @@ import time
 
 import numpy as np
 
+from lightgbm import LGBMClassifier as gbm
+
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import log_loss
 
 from src.io import save_to_pkl, read_features
@@ -24,6 +28,13 @@ if __name__ == "__main__":
         default=None,
         help="N training patients [int] for few_shot experiment",
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="logistic_regression",
+        help="logistic_regression/lightgbm",
+    )
+    parser.add_argument("--scale_features", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
@@ -41,6 +52,9 @@ if __name__ == "__main__":
     N patients for training: {args.train_n}\n\
     "
     )
+
+    if args.model not in ["logistic_regression", "lightgbm"]:
+        raise ValueError("model must be either logistic_regression or lightgbm")
 
     if args.overwrite and os.path.exists(args.path_to_output_dir):
         shutil.rmtree(args.path_to_output_dir, ignore_errors=True)
@@ -61,45 +75,110 @@ if __name__ == "__main__":
             train_n=args.train_n,
         )
 
-        print("fitting model")
-
         best_model = None
         best_score = 999999
-        best_l2 = 0
 
-        start_l, end_l = -5, 1
-        for l_exp in np.linspace(end_l, start_l, num=20):
-            l2 = 10 ** (l_exp)
+        if args.model == "logistic_regression":
+            print("fitting logistic regression")
+            best_l2 = 0
+            start_l, end_l = -5, 1
 
-            m = LogisticRegression(
-                C=l2,
-                max_iter=10000,
-                n_jobs=args.n_jobs,
-            )
+            for l_exp in np.linspace(end_l, start_l, num=20):
+                l2 = 10 ** (l_exp)
+                print(f"{l2=};")
 
-            m.fit(X_train, y_train)
+                if args.scale_features:
+                    m = Pipeline(
+                        [
+                            ("scaler", MinMaxScaler(feature_range=(0, 1))),
+                            (
+                                "model",
+                                LogisticRegression(
+                                    C=l2,
+                                    max_iter=10000,
+                                    n_jobs=args.n_jobs,
+                                ),
+                            ),
+                        ]
+                    )
 
-            score = log_loss(y_val, m.predict_proba(X_val)[:, 1])
+                else:
+                    m = LogisticRegression(
+                        C=l2,
+                        max_iter=10000,
+                        n_jobs=args.n_jobs,
+                    )
 
-            if score < best_score:
-                best_score = score
-                best_model = m
-                best_l2 = l2
+                m.fit(X_train, y_train)
+
+                score = log_loss(y_val, m.predict_proba(X_val)[:, 1])
+
+                if score < best_score:
+                    best_score = score
+                    best_model = m
+                    best_l2 = l2
+                    print(f"updated {best_score=}, {best_l2=}")
+
+            m_info = {
+                "path_to_patient_database": path_extract,
+                "path_to_features": PATH_TO_FEATURES,
+                "path_to_labels": PATH_TO_LABELS,
+                "feature_type": args.feature_type,
+                "best_score": best_score,
+                "best_l2": best_l2,
+            }
+
+        if args.model == "lightgbm":
+            print("fitting lightgbm")
+            best_lr = 0
+            best_num_leaves = 0
+            best_boosting_type = ""
+
+            for lr in [0.01, 0.1, 0.2]:
+                for num_leaves in [100, 300]:
+                    for boosting_type in ["gbdt", "dart", "goss"]:
+                        print(f"{lr=}; {num_leaves=}; {boosting_type=}")
+
+                        m = gbm(
+                            learning_rate=lr,
+                            num_leaves=num_leaves,
+                            n_estimators=1000,
+                            max_depth=-1,
+                            boosting_type=boosting_type,
+                            objective="binary",
+                            metric="binary_logloss",
+                            first_metric_only=True,
+                            min_child_samples=min(20, int(X_train.shape[0] / 2)),
+                            n_jobs=args.n_jobs,
+                        )
+
+                        m.fit(X_train, y_train)
+                        score = log_loss(y_val, m.predict_proba(X_val)[:, 1])
+
+                        if score < best_score:
+                            best_score = score
+                            best_model = m
+                            best_lr = lr
+                            best_num_leaves = num_leaves
+                            best_boosting_type = boosting_type
+                            print(
+                                f"updated {best_score=}, {best_lr=}, {best_num_leaves=}, {best_boosting_type=}"
+                            )
+
+            m_info = {
+                "path_to_patient_database": path_extract,
+                "path_to_features": PATH_TO_FEATURES,
+                "path_to_labels": PATH_TO_LABELS,
+                "feature_type": args.feature_type,
+                "best_score": best_score,
+                "best_lr": best_lr,
+                "best_num_leaves": best_num_leaves,
+                "best_boosting_type": best_boosting_type,
+            }
 
         print("saving model")
         # save model
         save_to_pkl(best_model, os.path.join(args.path_to_output_dir, "model.pkl"))
-
-        m_info = {
-            "path_to_patient_database": path_extract,
-            "path_to_features": PATH_TO_FEATURES,
-            "path_to_labels": PATH_TO_LABELS,
-            "feature_type": args.feature_type,
-            "best_score": best_score,
-            "best_l2": best_l2,
-        }
-
         save_to_pkl(m_info, os.path.join(args.path_to_output_dir, "model_info.pkl"))
-
         t_end = int(time.time() - START_TIME)
         print(f"finished in {t_end} seconds")
