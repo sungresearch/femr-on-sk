@@ -1,5 +1,6 @@
 model_names = {
     "count_sk": "SK [Count]",
+    "count_sk_gbm": "SK [Count] (GBM)",
     "clmbr_sk": "SK",
     "clmbr_sk_ft": "SK_FT",
     "clmbr_sk_ft_two_step": "SK_FT2",
@@ -9,6 +10,9 @@ model_names = {
     "clmbr_stanford_cp": "Stanford_Cont-Pre",
     "clmbr_stanford_cp_ft": "Stanford_Cont-Pre_FT",
     "clmbr_stanford_cp_ft_two_step": "Stanford_Cont-Pre_FT2",
+    "clmbr_sk_gbm": "SK (GBM)",
+    "clmbr_stanford_gbm": "Stanford (GBM)",
+    "clmbr_stanford_cp_gbm": "Stanford_Cont-Pre (GBM)",
 }
 
 task_names = {

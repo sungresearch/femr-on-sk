@@ -1,3 +1,4 @@
 path_to_output_dir: data/evaluate/adapter_models_few_shots
 path_to_models: data/adapter_models_few_shots
 overwrite: True
+n_boots: 1000

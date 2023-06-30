@@ -1,14 +1,11 @@
 path_to_output_dir: data/adapter_models_few_shots/count_sk
 path_to_labels: data/labels
 path_to_features: data/features/count_sk
-n_iters: 10 # number of models to train using each setting
+n_iters: 30 # number of models to train using each setting
 train_n:
-    - 2
-    - 4
-    - 8
-    - 16
-    - 32
-    - 64
-    - 128
+    - 256
+    - 512
+    - 1024
+    - 2048
 feature_type: count
 overwrite: True

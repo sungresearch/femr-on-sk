@@ -2,7 +2,11 @@ path_to_output_dir: data/clmbr_models/clmbr_sk
 overwrite: False
 transformer_config:
     learning_rate:
+        - 1e-4
         - 1e-5
+        - 1e-6
+        - 1e-7
+        - 1e-8
     rotary_type: global
     n_heads: 12
     n_layers: 12

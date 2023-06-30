@@ -1,0 +1,5 @@
+path_to_output_dir: data/evaluate/clmbr_finetuned
+path_to_models: data/clmbr_finetuned
+model_type: "clmbr_task_model"
+overwrite: True
+n_boots: 10000
