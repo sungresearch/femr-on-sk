@@ -1,5 +1,5 @@
-path_to_output_dir: data/clmbr_finetuned/clmbr_sk
-path_to_clmbr_data: data/clmbr_models/clmbr_sk
+path_to_output_dir: data/clmbr_finetuned/clmbr_stanford_tapt
+path_to_clmbr_data: data/clmbr_models/clmbr_stanford_tapt
 path_to_labels: data/labels
 overwrite: True
 transformer_config:

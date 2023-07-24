@@ -11,5 +11,7 @@ setup(
         "matplotlib",
         "seaborn",
         "dask[complete]",
+        "lightgbm",
+        "simple_slurm",
     ],
 )

@@ -1,4 +1,0 @@
-Task,SK [Count],SK [Count] (GBM),SK,SK_FT,Stanford,Stanford_FT,Stanford_Cont-Pre,Stanford_Cont-Pre_FT
-In-hospital Mortality,0.812,0.933,0.933,0.926,0.924,0.915,0.926,0.91
-Long LOS,0.838,0.888,0.864,0.868,0.845,0.855,0.854,0.864
-30-day Readmission,0.721,0.839,0.815,0.817,0.786,0.794,0.813,0.814

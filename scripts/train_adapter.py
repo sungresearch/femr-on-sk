@@ -2,6 +2,7 @@ import argparse
 import os
 import shutil
 import time
+import scipy
 
 import numpy as np
 
@@ -9,7 +10,7 @@ from lightgbm import LGBMClassifier as gbm
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import log_loss
 
 from src.io import save_to_pkl, read_features
@@ -47,7 +48,6 @@ if __name__ == "__main__":
     output_dir: {args.path_to_output_dir}\n\
     path_to_features: {PATH_TO_FEATURES}\n\
     path_to_labels: {PATH_TO_LABELS}\n\
-    path_to_patient_database: {path_extract}\n\
     feature_type: {args.feature_type}\n\
     N patients for training: {args.train_n}\n\
     "
@@ -63,8 +63,8 @@ if __name__ == "__main__":
         os.makedirs(args.path_to_output_dir, exist_ok=True)
 
         # load features
-        if args.feature_type not in ["count", "clmbr"]:
-            raise ValueError("--feature_type must be 'count' or 'clmbr'")
+        if args.feature_type not in ["count", "clmbr", "motor"]:
+            raise ValueError("--feature_type must be 'count' or 'clmbr' or 'motor'")
 
         X_train, y_train, X_val, y_val = read_features(
             path_extract,
@@ -83,6 +83,10 @@ if __name__ == "__main__":
             best_l2 = 0
             start_l, end_l = -5, 1
 
+            if type(X_train) == scipy.sparse.csr_matrix and args.scale_features:
+                X_train = X_train.toarray()
+                X_val = X_val.toarray()
+
             for l_exp in np.linspace(end_l, start_l, num=20):
                 l2 = 10 ** (l_exp)
                 print(f"{l2=};")
@@ -90,7 +94,7 @@ if __name__ == "__main__":
                 if args.scale_features:
                     m = Pipeline(
                         [
-                            ("scaler", MinMaxScaler(feature_range=(0, 1))),
+                            ("scaler", StandardScaler()),
                             (
                                 "model",
                                 LogisticRegression(

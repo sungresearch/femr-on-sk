@@ -4,8 +4,4 @@ overwrite: False
 transformer_config:
     learning_rate:
         - 1e-4
-        - 1e-5
-        - 1e-6
-        - 1e-7
-        - 1e-8
     max_iter: 1000000

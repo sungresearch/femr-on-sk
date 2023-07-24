@@ -1,0 +1,18 @@
+path_to_output_dir: data/clmbr_models/motor_sk
+overwrite: True
+transformer_config:
+    is_hierarchical: True
+    task: survival_clmbr
+    learning_rate:
+        - 1e-4
+        - 1e-5
+        - 1e-6
+    rotary_type:
+        - per_head
+        - global
+    n_heads: 12
+    clmbr_survival_dim:
+        - 512
+    n_layers:
+        - 12
+    max_iter: 1000000

@@ -1,5 +1,7 @@
 """
 Finetune CLMBR for task as proposed in https://arxiv.org/abs/2202.10054
+Step 1: train linear probe
+Step 2: end-to-end fine-tuning including the linear probe
 """
 
 import os
@@ -11,22 +13,15 @@ from src.io import read_msgpack
 from src.default_paths import path_extract
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Finetune CLMBR")
+    parser = argparse.ArgumentParser(description="Finetune FEMR")
     parser.add_argument("path_to_output_dir", type=str)
     parser.add_argument("--path_to_labels", type=str, required=True)
     parser.add_argument("--path_to_clmbr_data", type=str, required=True)
-    parser.add_argument(
-        "--path_to_linear_probe",
-        type=str,
-        help="trained linear probe for finetuning",
-        required=True,
-    )
-
     parser.add_argument("--num_batch_threads", type=int, default=3)
     parser.add_argument("--learning_rate", type=float, default=1e-4)
     parser.add_argument("--weight_decay", type=float, default=0)
     parser.add_argument("--max_iter", type=int, default=1000000)
-    parser.add_argument("--early_stopping_window_steps", type=int, default=10000)
+    parser.add_argument("--early_stopping_window_steps", type=int, default=2000)
     parser.add_argument("--overwrite", default=False, action="store_true")
 
     args = parser.parse_args()
@@ -35,22 +30,28 @@ if __name__ == "__main__":
     PATH_OG_CLMBR_DATA = args.path_to_clmbr_data
     PATH_OG_MODEL = os.path.join(PATH_OG_CLMBR_DATA, "clmbr_model")
     PATH_DICTIONARY = os.path.join(PATH_OG_CLMBR_DATA, "dictionary")
-    PATH_LINEAR_PROBE = os.path.join(args.path_to_linear_probe, "model", "probe.pkl")
+    PATH_SURVIVAL_DICTIONARY = None
+
+    if os.path.exists(os.path.join(PATH_OG_CLMBR_DATA, "survival_dictionary")):
+        PATH_SURVIVAL_DICTIONARY = os.path.join(
+            PATH_OG_CLMBR_DATA, "survival_dictionary"
+        )
+
     PATH_LABELS = args.path_to_labels
 
     PATH_OUTPUT_DIR = args.path_to_output_dir
     PATH_BATCHES = os.path.join(PATH_OUTPUT_DIR, "task_batches")
     PATH_NEW_CLMBR_MODEL = os.path.join(PATH_OUTPUT_DIR, "clmbr_model")
+    PATH_LINEAR_PROBE = os.path.join(PATH_OUTPUT_DIR, "linear_probe")
 
     os.makedirs(PATH_OUTPUT_DIR, exist_ok=True)
 
     print(
         f"\n\
-    task-specific finetuning\n\
+    task-specific finetuning of foundation model\n\
     output_dir: {PATH_OUTPUT_DIR}\n\
     original_clmbr_dir: {PATH_OG_CLMBR_DATA}\n\
     path_to_patient_database: {PATH_PATIENT_DATABASE}\n\
-    path_to_linear_probe: {PATH_LINEAR_PROBE}\n\
     path_to_labels: {PATH_LABELS}\
     "
     )
@@ -83,6 +84,30 @@ if __name__ == "__main__":
             "70",
             "--test_start",
             "85",
+        ]
+
+        if PATH_SURVIVAL_DICTIONARY is not None:
+            cmd += ["--clmbr_survival_dictionary_path", PATH_SURVIVAL_DICTIONARY]
+
+        if model_config["transformer"]["is_hierarchical"]:
+            cmd += ["--is_hierarchical"]
+
+        subprocess.run(cmd)
+
+    # Train linear-probe
+    if args.overwrite and os.path.exists(PATH_LINEAR_PROBE):
+        shutil.rmtree(PATH_LINEAR_PROBE, ignore_errors=True)
+
+    if not os.path.exists(PATH_LINEAR_PROBE):
+        cmd = [
+            "clmbr_train_linear_probe",
+            PATH_LINEAR_PROBE,
+            "--data_path",
+            PATH_PATIENT_DATABASE,
+            "--batches_path",
+            PATH_BATCHES,
+            "--model_dir",
+            PATH_OG_MODEL,
         ]
 
         subprocess.run(cmd)

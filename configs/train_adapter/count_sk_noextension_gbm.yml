@@ -1,0 +1,6 @@
+path_to_output_dir: data/adapter_models/count_sk_noextension_gbm
+path_to_labels: data/labels
+path_to_features: data/features/count_sk_noextension
+feature_type: count
+model: lightgbm
+overwrite: True

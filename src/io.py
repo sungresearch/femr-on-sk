@@ -74,7 +74,7 @@ def read_features(
     labels_object = load_labeled_patients(path_to_labels)
     features = read_pkl(path_to_features)
 
-    if feature_type == "clmbr":
+    if feature_type in ["clmbr", "motor"]:
         patient_ids = features["patient_ids"]
         feature_matrix = features["data_matrix"]
     elif feature_type == "count":

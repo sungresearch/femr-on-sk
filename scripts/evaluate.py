@@ -4,12 +4,14 @@ import shutil
 import time
 import random
 import pickle
+import scipy
 
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import msgpack
 import numpy as np
+import sklearn.pipeline
 
 import femr.datasets
 import femr.extension.dataloader
@@ -48,6 +50,13 @@ def get_adapter_model_results(args):
         is_eval=True,
         return_patient_ids=True,
     )
+
+    if (
+        type(X_test) == scipy.sparse.csr_matrix
+        and type(m) == sklearn.pipeline.Pipeline
+        and "scaler" in m.named_steps.keys()
+    ):
+        X_test = X_test.toarray()
 
     preds = m.predict_proba(X_test)[:, 1]
 

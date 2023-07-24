@@ -3,8 +3,11 @@ import subprocess
 import shutil
 import argparse
 
+import pandas as pd
+
 from src.io import read_msgpack
 from src.default_paths import path_extract
+from src.utils import list_dir
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pretrain CLMBR")
@@ -15,6 +18,12 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=1e-4)
     parser.add_argument("--weight_decay", type=float, default=0)
     parser.add_argument("--max_iter", type=int, default=None)
+    parser.add_argument(
+        "--limit_to_cohort",
+        type=str,
+        default=None,
+        help="path to labels folder to get patient IDs",
+    )
 
     args = parser.parse_args()
 
@@ -38,6 +47,28 @@ if __name__ == "__main__":
 
     os.makedirs(PATH_OUTPUT_DIR, exist_ok=True)
 
+    if args.limit_to_cohort is not None:
+        PATH_COHORT_PIDS = os.path.join(PATH_OUTPUT_DIR, "cohort_pids")
+
+        if args.overwrite and os.path.exists(PATH_COHORT_PIDS):
+            os.remove(PATH_COHORT_PIDS)
+
+        if not os.path.exists(PATH_COHORT_PIDS):
+            print(f"limiting pretraining to patient IDs in {args.limit_to_cohort}")
+            cohort_pids = []
+            labels = list_dir(args.limit_to_cohort)
+
+            for label in labels:
+                cohort_pids += pd.read_csv(
+                    os.path.join(args.limit_to_cohort, label, "labeled_patients.csv")
+                )["patient_id"].tolist()
+
+            cohort_pids = list(set(cohort_pids))
+
+            with open(PATH_COHORT_PIDS, "w") as f:
+                for pid in cohort_pids:
+                    f.write(f"{pid}\n")
+
     # Copy dictionary
     if not os.path.exists(PATH_DICTIONARY):
         shutil.copyfile(PATH_OG_DICTIONARY, PATH_DICTIONARY)
@@ -57,26 +88,37 @@ if __name__ == "__main__":
     vocab_size = clmbr_config["transformer"]["vocab_size"]
 
     if not os.path.exists(PATH_BATCHES):
-        subprocess.run(
-            [
-                "clmbr_create_batches",
-                PATH_BATCHES,
-                "--data_path",
-                PATH_PATIENT_DATABASE,
-                "--dictionary",
-                PATH_DICTIONARY,
-                "--transformer_vocab_size",
-                str(vocab_size),
-                "--task",
-                "clmbr",
-                "--val_start",
-                "70",
-                "--test_start",
-                "85",
-            ]
-        )
+        cmd = [
+            "clmbr_create_batches",
+            PATH_BATCHES,
+            "--data_path",
+            PATH_PATIENT_DATABASE,
+            "--dictionary",
+            PATH_DICTIONARY,
+            "--transformer_vocab_size",
+            str(vocab_size),
+            "--task",
+            "clmbr",
+            "--val_start",
+            "70",
+            "--test_start",
+            "85",
+        ]
 
-    # Fine-tune Full
+        # limit to cohort
+        if args.limit_to_cohort is not None:
+            cmd += [
+                "--limit_to_patients_file",
+                PATH_COHORT_PIDS,
+            ]
+
+        # check is_hierarchical
+        if clmbr_config["transformer"]["is_hierarchical"]:
+            cmd += ["--is_hierarchical"]
+
+        subprocess.run(cmd)
+
+    # Continue pretraining
     if args.overwrite and os.path.exists(PATH_MODEL):
         shutil.rmtree(PATH_MODEL, ignore_errors=True)
 

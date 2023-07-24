@@ -1,8 +1,7 @@
-path_to_output_dir: data/adapter_models_few_shots/count_sk_gbm
+path_to_output_dir: data/adapter_models_few_shots/clmbr_stanford_tapt
 path_to_labels: data/labels
-path_to_features: data/features/count_sk
+path_to_features: data/features/clmbr_stanford_tapt
 n_iters: 20 # number of models to train using each setting
-model: lightgbm
 train_n:
     - 2
     - 4
@@ -14,5 +13,6 @@ train_n:
     - 256
     - 512
     - 1024
-feature_type: count
+scale_features: False
+feature_type: clmbr
 overwrite: True

@@ -1,0 +1,11 @@
+path_to_output_dir: data/clmbr_models/clmbr_stanford_tapt
+path_to_og_clmbr_data: data/clmbr_models/clmbr_stanford
+overwrite: True
+transformer_config:
+    limit_to_cohort: data/labels
+    learning_rate:
+        - 1e-4
+        - 1e-5
+        - 1e-6
+        - 1e-7
+    max_iter: 1000000

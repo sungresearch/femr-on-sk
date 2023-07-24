@@ -2,4 +2,5 @@ path_to_output_dir: data/adapter_models/count_sk
 path_to_labels: data/labels
 path_to_features: data/features/count_sk
 feature_type: count
+scale_features: False
 overwrite: True

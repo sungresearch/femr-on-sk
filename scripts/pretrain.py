@@ -15,7 +15,9 @@ if __name__ == "__main__":
         type=str,
         help=("Path to save CLMBR data"),
     )
+    parser.add_argument("--task", type=str, default="clmbr")
     parser.add_argument("--overwrite", default=False, action="store_true")
+    parser.add_argument("--is_hierarchical", default=False, action="store_true")
     parser.add_argument("--learning_rate", type=float, required=True)
     parser.add_argument("--rotary_type", type=str, required=True)
     parser.add_argument("--num_batch_threads", type=int, default=3)
@@ -23,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("--token_dropout", type=float, default=0)
     parser.add_argument("--internal_dropout", type=float, default=0)
     parser.add_argument("--weight_decay", type=float, default=0)
-    parser.add_argument("--early_stopping_window_steps", type=int, default=10000)
+    parser.add_argument("--early_stopping_window_steps", type=int, default=2000)
     parser.add_argument("--max_iter", type=int, default=None)
     parser.add_argument(
         "--hidden_size", type=int, default=768, help="Transformer hidden size"
@@ -44,6 +46,7 @@ if __name__ == "__main__":
         "--attention_width", type=int, default=512, help="Transformer attention width."
     )
     parser.add_argument("--transformer_vocab_size", type=int, default=None)
+    parser.add_argument("--clmbr_survival_dim", type=int, default=None)
 
     args = parser.parse_args()
 
@@ -76,6 +79,28 @@ if __name__ == "__main__":
             ]
         )
 
+    if args.task == "survival_clmbr":
+        PATH_SURVIVAL_DICTIONARY = os.path.join(
+            PATH_TO_OUTPUT_DIR, "survival_dictionary"
+        )
+
+        if args.overwrite and os.path.exists(PATH_SURVIVAL_DICTIONARY):
+            os.remove(PATH_SURVIVAL_DICTIONARY)
+
+        if not os.path.exists(PATH_SURVIVAL_DICTIONARY):
+            subprocess.run(
+                [
+                    "clmbr_create_survival_dictionary",
+                    PATH_SURVIVAL_DICTIONARY,
+                    "--data_path",
+                    PATH_TO_PATIENT_DATABASE,
+                    "--num_buckets",
+                    "8",
+                    "--size",
+                    "1024",
+                ]
+            )
+
     # Create batches
     if args.overwrite and os.path.exists(PATH_BATCHES):
         shutil.rmtree(PATH_BATCHES)
@@ -90,25 +115,34 @@ if __name__ == "__main__":
         dictionary = read_msgpack(PATH_DICTIONARY)
         vocab_size = 2 ** int(np.log2(len(dictionary["regular"])))
 
+        if args.is_hierarchical:
+            vocab_size = 2 ** int(np.log2(len(dictionary["ontology_rollup"])))
+
     if not os.path.exists(PATH_BATCHES):
-        subprocess.run(
-            [
-                "clmbr_create_batches",
-                PATH_BATCHES,
-                "--data_path",
-                PATH_TO_PATIENT_DATABASE,
-                "--dictionary",
-                PATH_DICTIONARY,
-                "--transformer_vocab_size",
-                str(vocab_size),
-                "--task",
-                "clmbr",
-                "--val_start",
-                "70",
-                "--test_start",
-                "85",
-            ]
-        )
+        cmd = [
+            "clmbr_create_batches",
+            PATH_BATCHES,
+            "--data_path",
+            PATH_TO_PATIENT_DATABASE,
+            "--dictionary",
+            PATH_DICTIONARY,
+            "--transformer_vocab_size",
+            str(vocab_size),
+            "--task",
+            args.task,
+            "--val_start",
+            "70",
+            "--test_start",
+            "85",
+        ]
+
+        if args.task == "survival_clmbr":
+            cmd += ["--clmbr_survival_dictionary_path", PATH_SURVIVAL_DICTIONARY]
+
+        if args.is_hierarchical:
+            cmd += ["--is_hierarchical"]
+
+        subprocess.run(cmd)
 
     # Pretrain
     if args.overwrite and os.path.exists(PATH_MODEL):
@@ -150,6 +184,9 @@ if __name__ == "__main__":
             str(args.early_stopping_window_steps),
         ]
 
+        if args.task == "survival_clmbr":
+            cmd += ["--clmbr_survival_dim", str(args.clmbr_survival_dim)]
+
         if args.start_from_checkpoint is not None:
             cmd += [
                 "--start_from_checkpoint",
@@ -157,4 +194,3 @@ if __name__ == "__main__":
             ]
 
         subprocess.run(cmd)
-        # print(cmd)

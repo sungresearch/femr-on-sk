@@ -1,18 +1,17 @@
 """
-Runs script with config file.
+Submits slurm job to run script with config file.
 Searches for configs stored under "[root_path]/[configs]/*".
-For some, specifying the directory, e.g., "featurize" will run all configs stored there.
+For some, specifying the directory, e.g., "featurize" will run all configs stored there, i.e., "featurize/*.yml".
 
 Usage example:
-    python run.py --label "label.yml"
+    python run_slurm.py --label "label.yml"
 """
 
-import subprocess
 import argparse
 import os
-import math
+import datetime
 
-from itertools import zip_longest
+from simple_slurm import Slurm
 from sklearn.model_selection import ParameterGrid
 from src.io import read_yaml
 from src.default_paths import path_root
@@ -33,16 +32,23 @@ def get_configs(config_path: str):
     return configs
 
 
-def run_parrallel(commands: list, n_jobs: int = 10):
-    """
-    Uses subprocess to submit multiple jobs (commands) in parallel
-    """
-    processes = [(subprocess.Popen(p) for i, p in enumerate(commands))] * n_jobs
+def setup_slurm(args):
+    slurm = Slurm(ignore_pbs=True)
 
-    # submit n_jobs jobs at a time
-    for sub_p in zip_longest(*processes):
-        for p in filter(None, sub_p):
-            p.wait()
+    slurm_args = {}
+    for arg, arg_val in vars(args).items():
+        if "slurm" in arg and arg_val is not None:
+            arg = "_".join(arg.split("_")[1:])
+
+            if "time" in arg:
+                slurm_args[arg] = datetime.timedelta(days=arg_val)
+                continue
+
+            slurm_args[arg] = arg_val
+
+    slurm.add_arguments(**slurm_args)
+
+    return slurm
 
 
 if __name__ == "__main__":
@@ -52,13 +58,20 @@ if __name__ == "__main__":
     parser.add_argument("--featurize", type=str, default=None)
     parser.add_argument("--pretrain", type=str, default=None)
     parser.add_argument("--continue_pretrain", type=str, default=None)
-    parser.add_argument("--linear_probe", type=str, default=None)
     parser.add_argument("--finetune", type=str, default=None)
     parser.add_argument("--train_adapter", type=str, default=None)
     parser.add_argument("--train_adapter_few_shots", type=str, default=None)
     parser.add_argument("--evaluate", type=str, default=None)
+    parser.add_argument("--slurm_cpus_per_task", type=int, default=4)
+    parser.add_argument("--slurm_mem", type=int, default=12000)
+    parser.add_argument("--slurm_gres", type=str, default=None)
+    parser.add_argument("--slurm_time", type=int, default=1)
+    parser.add_argument("--slurm_mail-user", type=str, default=None)
+    parser.add_argument("--slurm_mail-type", type=str, default=None)
+    parser.add_argument("--slurm_constraint", type=str, default="AlmaLinux8")
 
     args = parser.parse_args()
+    slurm = setup_slurm(args)
 
     if args.label is not None:
         """
@@ -86,7 +99,16 @@ if __name__ == "__main__":
         PATH_SCRIPT = os.path.join(path_root, "scripts", "label.py")
         PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
 
+        PATH_LOGS = os.path.join(path_root, "logs/labeler")
+        os.makedirs(PATH_LOGS, exist_ok=True)
+
         for labeler in config["labelers"]:
+            slurm.add_arguments(
+                error=os.path.join(PATH_LOGS, f"{labeler}-%J.err"),
+                out=os.path.join(PATH_LOGS, f"{labeler}-%J.out"),
+                job_name="label",
+            )
+
             cmd = [
                 "python",
                 PATH_SCRIPT,
@@ -102,7 +124,7 @@ if __name__ == "__main__":
             if config["overwrite"]:
                 cmd += ["--overwrite"]
 
-            subprocess.run(cmd)
+            slurm.sbatch(" ".join(cmd))
 
     if args.label_sql is not None:
         """
@@ -128,7 +150,16 @@ if __name__ == "__main__":
         PATH_SCRIPT = os.path.join(path_root, "scripts", "label_sql.py")
         PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
 
+        PATH_LOGS = os.path.join(path_root, "logs/labeler")
+        os.makedirs(PATH_LOGS, exist_ok=True)
+
         for labeler in config["labelers"]:
+            slurm.add_arguments(
+                error=os.path.join(PATH_LOGS, f"{labeler}-%J.err"),
+                out=os.path.join(PATH_LOGS, f"{labeler}-%J.out"),
+                job_name="label",
+            )
+
             cmd = [
                 "python",
                 PATH_SCRIPT,
@@ -140,7 +171,7 @@ if __name__ == "__main__":
             if config["overwrite"]:
                 cmd += ["--overwrite"]
 
-            subprocess.run(cmd)
+            slurm.sbatch(" ".join(cmd))
 
     if args.featurize is not None:
         """
@@ -203,8 +234,22 @@ if __name__ == "__main__":
             else:
                 available_labels = list_dir(PATH_LABELS)
 
+            PATH_LOGS = os.path.join(
+                path_root, "logs/featurize/", PATH_OUTPUT_DIR.split("/")[-1]
+            )
+
+            os.makedirs(PATH_LOGS, exist_ok=True)
+
             # get labels for which to featurize
             for label in available_labels:
+                slurm.add_arguments(
+                    error=os.path.join(PATH_LOGS, f"{label}-%J.err"),
+                    out=os.path.join(PATH_LOGS, f"{label}-%J.out"),
+                    cpus_per_task=12,
+                    mem=64000,
+                    job_name="featurize",
+                )
+
                 cmd = [
                     "python",
                     PATH_SCRIPT,
@@ -229,13 +274,17 @@ if __name__ == "__main__":
                 elif config["featurizer_config"]["type"] == "clmbr":
                     cmd += ["--clmbr", "--path_to_clmbr_data", PATH_CLMBR_DATA]
 
+                    slurm.add_arguments(gres="gpu:1")
+
                 elif config["featurizer_config"]["type"] == "motor":
                     cmd += ["--motor", "--path_to_clmbr_data", PATH_CLMBR_DATA]
+
+                    slurm.add_arguments(gres="gpu:1")
 
                 if config["overwrite"]:
                     cmd += ["--overwrite"]
 
-                subprocess.run(cmd)
+                slurm.sbatch(" ".join(cmd))
 
     if args.pretrain is not None:
         """
@@ -256,13 +305,18 @@ if __name__ == "__main__":
                 max_iter: 1000000
             ```
         """
-
         PATH_CONFIG = os.path.join(path_root, "configs", args.pretrain)
         configs = get_configs(PATH_CONFIG)
 
         for config in configs:
             PATH_SCRIPT = os.path.join(path_root, "scripts", "pretrain.py")
             PATH_OUTPUT_DIR = os.path.join(path_root, config["path_to_output_dir"])
+
+            PATH_LOGS = os.path.join(
+                path_root, "logs/pretrain/", PATH_OUTPUT_DIR.split("/")[-1]
+            )
+
+            os.makedirs(PATH_LOGS, exist_ok=True)
 
             # create hyperparameter grid
             for k, v in config["transformer_config"].items():
@@ -284,6 +338,15 @@ if __name__ == "__main__":
                     [x.replace("--", "") for x in params_list]
                 )
 
+                slurm.add_arguments(
+                    error=os.path.join(PATH_LOGS, f"{model_name}-%J.err"),
+                    out=os.path.join(PATH_LOGS, f"{model_name}-%J.out"),
+                    cpus_per_task=12,
+                    mem=64000,
+                    gres="gpu:1",
+                    job_name="pretrain",
+                )
+
                 cmd = [
                     "python",
                     PATH_SCRIPT,
@@ -299,9 +362,7 @@ if __name__ == "__main__":
                 ):
                     cmd += ["--is_hierarchical"]
 
-                print(cmd)
-
-                subprocess.run(cmd)
+                slurm.sbatch(" ".join(cmd))
 
     if args.continue_pretrain is not None:
         """
@@ -346,6 +407,12 @@ if __name__ == "__main__":
 
             model_param_grid = list(ParameterGrid(config["transformer_config"]))
 
+            PATH_LOGS = os.path.join(
+                path_root, "logs/continue_pretrain/", PATH_OUTPUT_DIR.split("/")[-1]
+            )
+
+            os.makedirs(PATH_LOGS, exist_ok=True)
+
             for params in model_param_grid:
                 params_list = []
                 for k, v in params.items():
@@ -356,6 +423,15 @@ if __name__ == "__main__":
 
                 model_name = "CLMBR_" + "_".join(
                     [x.replace("--", "") for x in params_list]
+                )
+
+                slurm.add_arguments(
+                    error=os.path.join(PATH_LOGS, f"{model_name}-%J.err"),
+                    out=os.path.join(PATH_LOGS, f"{model_name}-%J.out"),
+                    cpus_per_task=12,
+                    mem=64000,
+                    gres="gpu:1",
+                    job_name="dapt",
                 )
 
                 cmd = [
@@ -378,14 +454,11 @@ if __name__ == "__main__":
                 if config["overwrite"]:
                     cmd += ["--overwrite"]
 
-                subprocess.run(cmd)
+                slurm.sbatch(" ".join(cmd))
 
     if args.finetune is not None:
         """
-        fine-tuning of CLMBR as proposed in https://arxiv.org/abs/2202.10054
-
-        Important: the finetuning step assumes that you have finished the linear_probing
-        step.
+        fine-tuning of FEMR as proposed in https://arxiv.org/abs/2202.10054
 
         Will train multiple fine-tuned models if path_to_task_batches contain multiple
         tasks.
@@ -409,6 +482,13 @@ if __name__ == "__main__":
 
             available_tasks = list_dir(PATH_LABELS)
 
+            PATH_LOGS = os.path.join(
+                path_root, "logs/finetune/", PATH_OUTPUT_DIR.split("/")[-1]
+            )
+
+            os.makedirs(PATH_LOGS, exist_ok=True)
+
+            cmds = []
             for task in available_tasks:
                 for lr in config["transformer_config"]["learning_rate"]:
                     cmd = [
@@ -428,7 +508,18 @@ if __name__ == "__main__":
                     if config["overwrite"]:
                         cmd += ["--overwrite"]
 
-                    subprocess.run(cmd)
+                    cmds.append(" ".join(cmd))
+
+            slurm.add_arguments(
+                error=os.path.join(PATH_LOGS, f"{task}_{lr}-%J.err"),
+                out=os.path.join(PATH_LOGS, f"{task}_{lr}-%J.out"),
+                cpus_per_task=12,
+                mem=64000,
+                gres="gpu:1",
+                job_name="finetune",
+            )
+
+            slurm.sbatch("\n".join(cmds))
 
     if args.train_adapter is not None:
         """
@@ -459,8 +550,21 @@ if __name__ == "__main__":
 
             available_features = list_dir(PATH_FEATURES)
 
-            cmds = []
+            PATH_LOGS = os.path.join(
+                path_root, "logs/train_adapter/", PATH_OUTPUT_DIR.split("/")[-1]
+            )
+
+            os.makedirs(PATH_LOGS, exist_ok=True)
+
             for features in available_features:
+                slurm.add_arguments(
+                    error=os.path.join(PATH_LOGS, f"{features}-%J.err"),
+                    out=os.path.join(PATH_LOGS, f"{features}-%J.out"),
+                    cpus_per_task=16,
+                    mem=32000,
+                    job_name="adapt",
+                )
+
                 cmd = [
                     "python",
                     PATH_SCRIPT,
@@ -482,9 +586,7 @@ if __name__ == "__main__":
                 if "model" in config:
                     cmd += ["--model", config["model"]]
 
-                cmds.append(cmd)
-
-            run_parrallel(cmds, math.ceil(len(cmds) / 2))
+                slurm.sbatch(" ".join(cmd))
 
     if args.train_adapter_few_shots is not None:
         """
@@ -525,8 +627,25 @@ if __name__ == "__main__":
             available_features = list_dir(path_features)
 
             for train_n in config["train_n"]:
+                PATH_LOGS = os.path.join(
+                    path_root,
+                    "logs/train_adapter_few_shots/",
+                    path_output_dir.split("/")[-1],
+                )
+
+                os.makedirs(PATH_LOGS, exist_ok=True)
+
                 for i_iter in range(config["n_iters"]):
                     output_suffix = f"_{train_n}_iter{i_iter}"
+
+                    slurm.add_arguments(
+                        error=os.path.join(PATH_LOGS, f"{output_suffix}-%J.err"),
+                        out=os.path.join(PATH_LOGS, f"{output_suffix}-%J.out"),
+                        cpus_per_task=16,
+                        mem=32000,
+                        job_name="adapt_fs",
+                    )
+
                     cmds = []
                     for features in available_features:
                         cmd = [
@@ -541,6 +660,8 @@ if __name__ == "__main__":
                             config["feature_type"],
                             "--train_n",
                             str(train_n),
+                            "--n_jobs",
+                            "1",
                         ]
 
                         if config["overwrite"]:
@@ -552,9 +673,9 @@ if __name__ == "__main__":
                         if "model" in config:
                             cmd += ["--model", config["model"]]
 
-                        cmds.append(cmd)
+                        cmds.append(" ".join(cmd))
 
-                    run_parrallel(cmds, math.ceil(len(cmds) / 3))
+                    slurm.sbatch("\n".join(cmds))
 
     if args.evaluate is not None:
         """
@@ -568,7 +689,6 @@ if __name__ == "__main__":
             overwrite: True
             ```
         """
-
         config_path = os.path.join(path_root, "configs", args.evaluate)
         configs = get_configs(config_path)
 
@@ -578,8 +698,17 @@ if __name__ == "__main__":
             path_models = os.path.join(path_root, config["path_to_models"])
             available_models = list_dir(path_models)
 
+            PATH_LOGS = os.path.join(path_root, "logs/evaluate")
+            os.makedirs(PATH_LOGS, exist_ok=True)
+
             for model in available_models:
                 available_tasks = list_dir(os.path.join(path_models, model))
+
+                slurm.add_arguments(
+                    error=os.path.join(PATH_LOGS, f"{model}_%J.err"),
+                    out=os.path.join(PATH_LOGS, f"{model}_%J.out"),
+                    job_name="evaluate",
+                )
 
                 cmds = []
                 for task in available_tasks:
@@ -606,6 +735,6 @@ if __name__ == "__main__":
                     if config["overwrite"]:
                         cmd += ["--overwrite"]
 
-                    cmds.append(cmd)
+                    cmds.append(" ".join(cmd))
 
-                run_parrallel(cmds, len(cmds))
+                slurm.sbatch("\n".join(cmds))

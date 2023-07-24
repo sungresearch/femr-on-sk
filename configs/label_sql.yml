@@ -1,0 +1,11 @@
+labelers:
+    - mortality
+    - long_los
+    - readmission
+    - thrombocytopenia_lab
+    - hyperkalemia_lab
+    - hypoglycemia_lab
+    - hyponatremia_lab
+    - anemia_lab
+path_to_output_dir: data/labels
+overwrite: True

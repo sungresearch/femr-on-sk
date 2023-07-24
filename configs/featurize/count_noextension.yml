@@ -1,8 +1,7 @@
 path_to_labels: data/labels
-path_to_output_dir: data/features/count_sk
+path_to_output_dir: data/features/count_sk_noextension
 overwrite: True
 
 featurizer_config:
     type: count
     num_threads: 4
-    is_ontology_expansion: True
