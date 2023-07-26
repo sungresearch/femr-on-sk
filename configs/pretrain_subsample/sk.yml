@@ -1,0 +1,20 @@
+path_to_clmbr_output_dir: data/clmbr_models/clmbr_sk
+overwrite: True
+sample_percentage:
+    - 0.001
+    - 0.01
+    - 0.05
+    - 0.1
+    - 0.2
+    - 0.4
+    - 0.8
+transformer_config:
+    learning_rate:
+        - 1e-4
+        - 1e-5
+        - 1e-6
+    rotary_type:
+        - per_head
+    n_heads: 12
+    n_layers: 12
+    max_iter: 1000000

@@ -1,6 +1,8 @@
 import os
+import random
 import numpy as np
 from femr.datasets import PatientDatabase
+from src.default_paths import path_extract
 
 
 def list_dir(path: str):
@@ -35,3 +37,25 @@ def get_best_clmbr_model(path):
                 best_model = model
 
     return best_model
+
+
+def create_restricted_patients_file(
+    output_dir: str,
+    percentage: float,
+    seed: int = 444,
+    overwrite: bool = True,
+):
+    """deterministically create restricted patient IDs file"""
+    if overwrite and os.path.exists(output_dir):
+        os.remove(output_dir)
+
+    if not os.path.exists(output_dir):
+        pids = list(PatientDatabase(path_extract))
+        random.Random(seed).shuffle(pids)
+
+        n_patients = int(len(pids) * percentage)
+        sel_pids = pids[:n_patients]
+
+        with open(output_dir, "w") as f:
+            for pid in sel_pids:
+                f.write(f"{pid}\n")

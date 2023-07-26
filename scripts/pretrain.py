@@ -148,6 +148,13 @@ if __name__ == "__main__":
         if args.is_hierarchical:
             cmd += ["--is_hierarchical"]
 
+        # limit to patient file
+        if args.limit_to_patients_file is not None:
+            cmd += [
+                "--limit_to_patients_file",
+                args.limit_to_patients_file,
+            ]
+
         subprocess.run(cmd)
 
     # Pretrain
