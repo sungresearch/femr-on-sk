@@ -16,7 +16,7 @@ from itertools import zip_longest
 from sklearn.model_selection import ParameterGrid
 from src.io import read_yaml
 from src.default_paths import path_root
-from src.utils import list_dir, get_best_clmbr_model
+from src.utils import list_dir, get_best_clmbr_model, create_restricted_patients_file
 
 
 def get_configs(config_path: str):
@@ -52,6 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("--featurize", type=str, default=None)
     parser.add_argument("--pretrain", type=str, default=None)
     parser.add_argument("--continue_pretrain", type=str, default=None)
+    parser.add_argument("--pretrain_subsample", type=str, default=None)
     parser.add_argument("--linear_probe", type=str, default=None)
     parser.add_argument("--finetune", type=str, default=None)
     parser.add_argument("--train_adapter", type=str, default=None)
@@ -379,6 +380,71 @@ if __name__ == "__main__":
                     cmd += ["--overwrite"]
 
                 subprocess.run(cmd)
+
+    if args.pretrain_subsample is not None:
+        """
+        pretrain on subsampled population
+        """
+        PATH_CONFIG = os.path.join(path_root, "configs", args.pretrain_subsample)
+        configs = get_configs(PATH_CONFIG)
+
+        for config in configs:
+            if "path_to_og_clmbr_data" in config:
+                PATH_PRETRAIN_SCRIPT = os.path.join(
+                    path_root, "scripts", "continue_pretrain.py"
+                )
+                PATH_OG_CLMBR_DATA = os.path.join(
+                    path_root, config["path_to_og_clmbr_data"]
+                )
+            else:
+                PATH_PRETRAIN_SCRIPT = os.path.join(path_root, "scripts", "pretrain.py")
+                PATH_OG_CLMBR_DATA = None
+
+            for k, v in config["transformer_config"].items():
+                if type(v) == list:
+                    continue
+                config["transformer_config"][k] = [v]
+
+            model_param_grid = list(ParameterGrid(config["transformer_config"]))
+
+            for sample_percentage in config["sample_percentage"]:
+                PATH_CLMBR_OUTPUT_DIR = os.path.join(
+                    path_root,
+                    config["path_to_clmbr_output_dir"] + "_" + str(sample_percentage),
+                )
+                os.makedirs(PATH_CLMBR_OUTPUT_DIR, exist_ok=True)
+                PATH_PATIENTS_FILE = os.path.join(
+                    PATH_CLMBR_OUTPUT_DIR, "patients_file"
+                )
+                create_restricted_patients_file(
+                    PATH_PATIENTS_FILE, sample_percentage, overwrite=config["overwrite"]
+                )
+
+                # pretraining jobs
+                for params in model_param_grid:
+                    params_list = []
+                    for k, v in params.items():
+                        params_list += ["--" + str(k), str(v)]
+
+                    model_name = "CLMBR_" + "_".join(
+                        [x.replace("--", "") for x in params_list]
+                    )
+
+                    cmd = [
+                        "python",
+                        PATH_PRETRAIN_SCRIPT,
+                        os.path.join(PATH_CLMBR_OUTPUT_DIR, model_name),
+                        "--limit_to_patients_file",
+                        PATH_PATIENTS_FILE,
+                    ] + params_list
+
+                    if PATH_OG_CLMBR_DATA is not None:
+                        cmd += ["--path_to_og_clmbr_data", PATH_OG_CLMBR_DATA]
+
+                    if config["overwrite"]:
+                        cmd += ["--overwrite"]
+
+                    subprocess.run(cmd)
 
     if args.finetune is not None:
         """
