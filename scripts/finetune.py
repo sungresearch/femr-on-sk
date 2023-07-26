@@ -89,7 +89,7 @@ if __name__ == "__main__":
         if PATH_SURVIVAL_DICTIONARY is not None:
             cmd += ["--clmbr_survival_dictionary_path", PATH_SURVIVAL_DICTIONARY]
 
-        if model_config["transformer"]["is_hierarchical"]:
+        if "is_hierarchical" in model_config and model_config["is_hierarchical"]:
             cmd += ["--is_hierarchical"]
 
         subprocess.run(cmd)
@@ -151,7 +151,7 @@ if __name__ == "__main__":
             "--early_stopping_window_steps",
             str(args.early_stopping_window_steps),
             "--linear_probe",
-            str(PATH_LINEAR_PROBE),
+            str(os.path.join(PATH_LINEAR_PROBE, "probe.pkl")),
         ]
 
         subprocess.run(cmd)
