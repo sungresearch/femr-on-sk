@@ -24,6 +24,12 @@ if __name__ == "__main__":
         default=None,
         help="path to labels folder to get patient IDs",
     )
+    parser.add_argument(
+        "--limit_to_patients_file",
+        default=None,
+        type=str,
+        help="Path to file containing patient_ids to allow in batches",
+    )
 
     args = parser.parse_args()
 
@@ -37,6 +43,8 @@ if __name__ == "__main__":
     PATH_BATCHES = os.path.join(PATH_OUTPUT_DIR, "clmbr_batches")
     PATH_MODEL = os.path.join(PATH_OUTPUT_DIR, "clmbr_model")
 
+    PATH_LIMIT_PATIENT_IDS = None
+
     print(
         f"\n\
     output_dir: {PATH_OUTPUT_DIR}\n\
@@ -47,13 +55,14 @@ if __name__ == "__main__":
 
     os.makedirs(PATH_OUTPUT_DIR, exist_ok=True)
 
+    # RESTRICT CONTINUED PRETRAINING TO PATIENT FILE
     if args.limit_to_cohort is not None:
-        PATH_COHORT_PIDS = os.path.join(PATH_OUTPUT_DIR, "cohort_pids")
+        PATH_LIMIT_PATIENT_IDS = os.path.join(PATH_OUTPUT_DIR, "cohort_pids")
 
-        if args.overwrite and os.path.exists(PATH_COHORT_PIDS):
-            os.remove(PATH_COHORT_PIDS)
+        if args.overwrite and os.path.exists(PATH_LIMIT_PATIENT_IDS):
+            os.remove(PATH_LIMIT_PATIENT_IDS)
 
-        if not os.path.exists(PATH_COHORT_PIDS):
+        if not os.path.exists(PATH_LIMIT_PATIENT_IDS):
             print(f"limiting pretraining to patient IDs in {args.limit_to_cohort}")
             cohort_pids = []
             labels = list_dir(args.limit_to_cohort)
@@ -65,9 +74,12 @@ if __name__ == "__main__":
 
             cohort_pids = list(set(cohort_pids))
 
-            with open(PATH_COHORT_PIDS, "w") as f:
+            with open(PATH_LIMIT_PATIENT_IDS, "w") as f:
                 for pid in cohort_pids:
                     f.write(f"{pid}\n")
+
+    if args.limit_to_patients_file is not None:
+        PATH_LIMIT_PATIENT_IDS = args.limit_to_patients_file
 
     # Copy dictionary
     if not os.path.exists(PATH_DICTIONARY):
@@ -105,11 +117,11 @@ if __name__ == "__main__":
             "85",
         ]
 
-        # limit to cohort
-        if args.limit_to_cohort is not None:
+        # limit to patient file
+        if PATH_LIMIT_PATIENT_IDS is not None:
             cmd += [
                 "--limit_to_patients_file",
-                PATH_COHORT_PIDS,
+                PATH_LIMIT_PATIENT_IDS,
             ]
 
         # check is_hierarchical

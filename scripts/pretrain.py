@@ -31,6 +31,12 @@ if __name__ == "__main__":
         "--hidden_size", type=int, default=768, help="Transformer hidden size"
     )
     parser.add_argument(
+        "--limit_to_patients_file",
+        default=None,
+        type=str,
+        help="Path to file containing patient_ids to allow in batches",
+    )
+    parser.add_argument(
         "--intermediate_size",
         type=int,
         default=3072,
