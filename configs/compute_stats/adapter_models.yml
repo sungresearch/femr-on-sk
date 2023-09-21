@@ -1,0 +1,17 @@
+path_to_output_dir: data/stats/adapter_models
+path_to_results: data/evaluate/adapter_models
+comparisons:
+  -
+    - count_sk_noextension_gbm
+    - clmbr_stanford
+  -
+    - count_sk_noextension_gbm
+    - clmbr_stanford_cp
+  -
+    - clmbr_sk
+    - clmbr_stanford
+  -
+    - clmbr_sk
+    - clmbr_stanford_cp
+
+overwrite: True

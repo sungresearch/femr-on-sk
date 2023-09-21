@@ -1,0 +1,6 @@
+path_to_labels: data/labels
+path_to_output_dir: data/features_few_shots/clmbr_stanford_cp
+overwrite: True
+featurizer_config:
+    type: clmbr
+    path_to_clmbr_data: data/clmbr_models_for_few_shots/clmbr_stanford_cp

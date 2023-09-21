@@ -1,0 +1,29 @@
+path_to_output_dir: data/stats/adapter_models_few_shots
+path_to_results: data/evaluate/adapter_models_few_shots
+comparisons:
+  -
+    - count_sk_noextension_gbm
+    - clmbr_stanford
+  -
+    - count_sk_noextension_gbm
+    - clmbr_stanford_cp
+  -
+    - clmbr_sk
+    - clmbr_stanford
+  -
+    - clmbr_sk
+    - clmbr_stanford_cp
+train_n:
+    - 2
+    - 4
+    - 8
+    - 16
+    - 32
+    - 64
+    - 128
+    - 256
+    - 512
+    - 1024
+n_model_train_iters: 20
+overwrite: True
+correct_calibration: True

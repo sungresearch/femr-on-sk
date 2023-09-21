@@ -30,6 +30,12 @@ if __name__ == "__main__":
         help="N training patients [int] for few_shot experiment",
     )
     parser.add_argument(
+        "--patients_file_to_exclude",
+        type=str,
+        default=None,
+        help="Path to file containing patient IDs to be excluded for few_shot experiment",
+    )
+    parser.add_argument(
         "--model",
         type=str,
         default="logistic_regression",
@@ -73,6 +79,7 @@ if __name__ == "__main__":
             args.feature_type,
             is_train=True,
             train_n=args.train_n,
+            patients_file_to_exclude=args.patients_file_to_exclude,
         )
 
         best_model = None

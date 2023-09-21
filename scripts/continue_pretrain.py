@@ -18,6 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=1e-4)
     parser.add_argument("--weight_decay", type=float, default=0)
     parser.add_argument("--max_iter", type=int, default=None)
+    parser.add_argument("--early_stopping_window_steps", type=int, default=15000)
     parser.add_argument(
         "--limit_to_cohort",
         type=str,
@@ -166,6 +167,8 @@ if __name__ == "__main__":
             str(model_config["hidden_size"]),
             "--intermediate_size",
             str(model_config["intermediate_size"]),
+            "--early_stopping_window_steps",
+            str(args.early_stopping_window_steps),
         ]
 
         subprocess.run(cmd)

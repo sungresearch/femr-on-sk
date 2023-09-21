@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("--token_dropout", type=float, default=0)
     parser.add_argument("--internal_dropout", type=float, default=0)
     parser.add_argument("--weight_decay", type=float, default=0)
-    parser.add_argument("--early_stopping_window_steps", type=int, default=2000)
+    parser.add_argument("--early_stopping_window_steps", type=int, default=15000)
     parser.add_argument("--max_iter", type=int, default=None)
     parser.add_argument(
         "--hidden_size", type=int, default=768, help="Transformer hidden size"

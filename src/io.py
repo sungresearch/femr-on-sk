@@ -51,6 +51,7 @@ def read_features(
     is_eval: bool = False,
     train_n: Optional[int] = None,
     return_patient_ids: bool = False,
+    patients_file_to_exclude: str = None,
 ):
     """
     Load features and labels for training and evaluation of adapter models.
@@ -80,6 +81,17 @@ def read_features(
     elif feature_type == "count":
         patient_ids = features[1]
         feature_matrix = features[0]
+
+    # Exclude patients specified in the patients file
+    # For few-shots experiment, this is only needed to be done for is_train=True
+    # For evaluation (is_eval=True), those patients would have already been excluded
+    if patients_file_to_exclude:
+        with open(patients_file_to_exclude, "r") as f:
+            ids_to_exclude = [int(a) for a in f]
+
+        indices = np.where(~np.isin(patient_ids, ids_to_exclude))[0]
+        patient_ids = patient_ids[indices]
+        feature_matrix = feature_matrix[indices, :]
 
     # get hashed patient IDs to generate splits
     hashed_pids = hash_pids(path_to_patient_database, patient_ids)

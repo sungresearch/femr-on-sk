@@ -5,6 +5,7 @@ import time
 import random
 import pickle
 import scipy
+import functools
 
 import haiku as hk
 import jax
@@ -24,14 +25,15 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 from src.io import save_to_pkl, read_pkl, read_features
 from src.default_paths import path_extract
 from src.utils import hash_pids, get_best_clmbr_model
-
-"""
-TODO: add expected calibration error
-"""
+from src.metrics import average_precision_score_calibrated, expected_calibration_error
 
 metrics = {
     "auroc": roc_auc_score,
     "auprc": average_precision_score,
+    "auprc_c": average_precision_score_calibrated,
+    "ece": functools.partial(
+        expected_calibration_error, num_bins=10, quantile_bins=True
+    ),
 }
 
 
@@ -221,7 +223,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate adapter model")
     parser.add_argument("path_to_output_dir", type=str)
     parser.add_argument("--path_to_model", type=str)
-
+    parser.add_argument("--correct_calibration", action="store_true")
     parser.add_argument(
         "--model_type",
         type=str,
@@ -235,6 +237,19 @@ if __name__ == "__main__":
 
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
+
+    metrics = {
+        "auroc": roc_auc_score,
+        "auprc": average_precision_score,
+        "auprc_c": average_precision_score_calibrated,
+        "ece": functools.partial(
+            expected_calibration_error,
+            num_bins=10,
+            quantile_bins=True,
+            correct_y_pred=args.correct_calibration,
+            b0=0.5,  # only used when args.correct_calibration = True
+        ),
+    }
 
     START_TIME = time.time()
 

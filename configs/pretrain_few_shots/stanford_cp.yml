@@ -1,0 +1,9 @@
+path_to_output_dir: data/clmbr_models_for_few_shots/clmbr_stanford_cp
+path_to_og_clmbr_data: data/clmbr_models/clmbr_stanford
+overwrite: True
+transformer_config:
+    learning_rate:
+        - 1e-4
+        - 1e-5
+        - 1e-6
+    max_iter: 1000000

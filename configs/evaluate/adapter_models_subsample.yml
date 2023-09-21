@@ -1,0 +1,4 @@
+path_to_output_dir: data/evaluate/adapter_models_subsample
+path_to_models: data/adapter_models_subsample
+overwrite: True
+n_boots: 10000

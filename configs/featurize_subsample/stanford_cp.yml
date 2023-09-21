@@ -1,0 +1,16 @@
+path_to_labels: data/labels
+path_to_output_dir_prefix: data/features_subsample/clmbr_stanford_cp # the actual dir contains sample percentage
+sample_percentage:
+    - 0.001
+    - 0.01
+    - 0.05
+    - 0.1
+    - 0.2
+    - 0.4
+    - 0.8
+
+overwrite: True
+
+featurizer_config:
+    type: clmbr
+    path_to_clmbr_data_prefix: data/clmbr_models/clmbr_stanford_cp # the actual dir contains sample percentage

@@ -9,8 +9,10 @@ setup(
     install_requires=[
         "pandas",
         "matplotlib",
+        "matplotlib-venn",
         "seaborn",
         "dask[complete]",
+        "dask-sql[complete]",
         "lightgbm",
         "simple_slurm",
     ],

@@ -1,0 +1,11 @@
+model,CLMBR_SK,CLMBR_SK,CLMBR,CLMBR,CLMBR_DAPT,CLMBR_DAPT
+model_type,[FT],[LP],[FT],[LP],[FT],[LP]
+task,,,,,,
+In-hospital Mortality,"nan [nan, nan]","0.002 [0.001, 0.004]","nan [nan, nan]","0.002 [0.001, 0.004]","nan [nan, nan]","0.002 [0.001, 0.004]"
+Long LOS,"nan [nan, nan]","0.006 [0.006, 0.017]","nan [nan, nan]","0.011 [0.009, 0.022]","nan [nan, nan]","0.01 [0.008, 0.021]"
+30-day Readmission,"nan [nan, nan]","0.006 [0.006, 0.015]","nan [nan, nan]","0.004 [0.004, 0.012]","nan [nan, nan]","0.007 [0.006, 0.014]"
+Hypoglycemia,"nan [nan, nan]","0.005 [0.003, 0.008]","nan [nan, nan]","0.004 [0.002, 0.007]","nan [nan, nan]","0.004 [0.002, 0.007]"
+Hyponatremia,"nan [nan, nan]","0.001 [0.0, 0.002]","nan [nan, nan]","0.001 [0.001, 0.002]","nan [nan, nan]","0.001 [0.0, 0.002]"
+Hyperkalemia,"nan [nan, nan]","0.006 [0.003, 0.009]","nan [nan, nan]","0.005 [0.003, 0.008]","nan [nan, nan]","0.005 [0.003, 0.008]"
+Thrombocytopenia,"nan [nan, nan]","0.002 [0.001, 0.005]","nan [nan, nan]","0.001 [0.001, 0.005]","nan [nan, nan]","0.001 [0.001, 0.005]"
+Anemia,"nan [nan, nan]","0.005 [0.004, 0.01]","nan [nan, nan]","0.003 [0.003, 0.008]","nan [nan, nan]","0.005 [0.004, 0.009]"
