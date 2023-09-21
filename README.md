@@ -9,8 +9,9 @@ This codebase contains scripts to:
 4. adaption of CLMBR pretrained on de-identified [Stanford Electronic Health Records in OMOP (STARR OMOP)](https://med.stanford.edu/starr-omop.html)
 
 #### Evaluation settings:
-- Comparison across models and adaptation strategies
-- Few-shot training
+- Benchmark GBM and CLMBR models
+- Few-shots settings
+- CLMBR models pretrained on subsamples
 
 ## Installation
 
