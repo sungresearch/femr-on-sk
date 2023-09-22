@@ -397,7 +397,7 @@ def make_subsample_figure(
         ax.set_ylabel(f"Change in {metric}")
 
     ax.set_xlabel(
-        "Pretraining Subsample Size\n(% Patients)\n(No. Patients)\n(No. Coded Events)"
+        "Pretraining Subsample Size\n% Patients\n(No. Patients)\n(No. Coded Events)"
     )
 
     if task is not None:
