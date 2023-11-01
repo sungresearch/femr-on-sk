@@ -332,7 +332,7 @@ def make_subsample_figure(
     if plot_deltas:
         models = data.model.unique()
         tasks = data.task.unique()
-        base = data.query("model=='CLMBR'")
+        base = data.query("model=='CLMBR_SK'")
 
         new_data = pd.DataFrame()
 
