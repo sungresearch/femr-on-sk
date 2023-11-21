@@ -409,6 +409,141 @@ def make_subsample_figure(
     plt.close()
 
 
+def make_subsample_figure_new(
+    path_to_csv_main: str,
+    path_to_csv_ss: str,
+    save_path: str,
+    task: str = None,
+    metric: str = "AUROC",
+    figsize: tuple = (6, 4),
+    ylim: list = None,
+    plot_deltas: bool = False,
+):
+    df_adapters = pd.read_csv(path_to_csv_main)
+    df_adapters_ss = pd.read_csv(path_to_csv_ss)
+    df_adapters = df_adapters.replace({**model_names, **task_names}).query(
+        "model=='CLMBR_SK' and task==@tasks"
+    )
+
+    df_adapters_ss = df_adapters_ss.replace({**model_names, **task_names}).query(
+        "model==['CLMBR_DAPT'] and task==@tasks"
+    )
+
+    df_adapters_ss = df_adapters_ss.sort_values(["model", "perc_samples"])
+    df_adapters_ss["perc_samples"] = df_adapters_ss["perc_samples"].astype(str)
+
+    data = pd.concat(
+        (
+            df_adapters_ss,
+            pd.concat(
+                (
+                    df_adapters.assign(perc_samples=x, iteration=0)
+                    for x in df_adapters_ss.perc_samples
+                )
+            ),
+        )
+    )
+
+    data = data.rename(
+        columns={"auroc": "AUROC", "auprc": "AUPRC", "auprc_c": "AUPRC_C", "ece": "ECE"}
+    ).drop_duplicates()
+    data = data.assign(
+        perc_samples=data["perc_samples"].replace(
+            {
+                "0.001": "0.1%\n(1.6K)\n(100K)",
+                "0.01": "1%\n(16K)\n(1M)",
+                "0.05": "5%\n(78K)\n(5M)",
+                "0.1": "10%\n(156K)\n(10M)",
+                "0.2": "20%\n(313K)\n(20M)",
+                "0.4": "40%\n(626K)\n(40M)",
+                "0.8": "80%\n(1.3M)\n(80M)",
+            }
+        )
+    )
+
+    if plot_deltas:
+        models = data.model.unique()
+        tasks = data.task.unique()
+        base = data.query("model=='CLMBR_SK'")
+
+        new_data = pd.DataFrame()
+
+        for model in models:
+            for t in tasks:
+                new_data = pd.concat(
+                    (
+                        new_data,
+                        data.query("model==@model and task==@t")
+                        .reset_index()
+                        .assign(
+                            **{
+                                metric: (
+                                    data.query(
+                                        "model==@model and task==@t"
+                                    ).reset_index()[metric]
+                                    - base.query("task==@t").reset_index()[metric]
+                                )
+                            }
+                        ),
+                    )
+                )
+
+        data = new_data
+
+    if task is not None:
+        data = data.query("task==@task")
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 4))
+
+    sns.lineplot(
+        data=data,
+        x="perc_samples",
+        y=metric,
+        hue="model",
+        units="task",
+        markers=None,
+        palette=color_palette,
+        estimator=None,
+        alpha=0.15,
+        ax=ax,
+    )
+
+    sns.lineplot(
+        data=data,
+        x="perc_samples",
+        y=metric,
+        hue="model",
+        style="model",
+        dashes=False,
+        markers=marker_style,
+        markersize=7,
+        ax=ax,
+        palette=color_palette,
+        errorbar=None,
+    )
+
+    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    ax.set_ylabel(metric)
+
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    if plot_deltas:
+        ax.set_ylabel(f"Change in {metric}")
+
+    ax.set_xlabel(
+        "Pretraining Subsample Size\n% Patients\n(No. Patients)\n(No. Coded Events)"
+    )
+
+    if task is not None:
+        ax.set_title(task)
+
+    ax.grid(axis="y", zorder=0, color="lightgrey")
+
+    plt.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.2)
+    plt.close()
+
+
 def radar_factory(num_vars, frame="circle"):
     """Create a radar chart with `num_vars` axes.
 
@@ -515,6 +650,7 @@ if __name__ == "__main__":
     benchmark_figures = args.benchmark_figures or args.all
     few_shots_figures = args.few_shots_figures or args.all
     subsample_figures = args.subsample_figures or args.all
+    subsample_figures_new = args.subsample_figures or args.all
     path_results = os.path.join(path_root, "results/raw/")
 
     if benchmark_tables:
@@ -670,4 +806,44 @@ if __name__ == "__main__":
                     metric=metric,
                     task=task,
                     plot_deltas=True,
+                )
+
+    if subsample_figures_new:
+        path_output_dir = os.path.join(path_root, "results/figures/subsample_new")
+        os.makedirs(path_output_dir, exist_ok=True)
+
+        path_to_csv_main = os.path.join(path_results, "adapter_models/results.csv")
+        path_to_csv_ss = os.path.join(
+            path_results, "adapter_models_subsample/results.csv"
+        )
+
+        ylims = {
+            "AUROC": [-0.1, 0.1],
+            "ECE": [-0.01, 0.01],
+            "AUPRC": None,
+            "AUPRC_C": None,
+        }
+
+        for metric in ["AUROC", "AUPRC", "AUPRC_C", "ECE"]:
+            make_subsample_figure_new(
+                path_to_csv_main=path_to_csv_main,
+                path_to_csv_ss=path_to_csv_ss,
+                save_path=os.path.join(path_output_dir, f"main_avg_{metric}.png"),
+                metric=metric,
+                plot_deltas=True,
+                ylim=ylims[metric],
+            )
+
+            # for each task
+            for task in tasks:
+                make_subsample_figure_new(
+                    path_to_csv_main=path_to_csv_main,
+                    path_to_csv_ss=path_to_csv_ss,
+                    save_path=os.path.join(
+                        path_output_dir, f"main_{task}_{metric}.png"
+                    ),
+                    metric=metric,
+                    task=task,
+                    plot_deltas=True,
+                    ylim=ylims[metric],
                 )

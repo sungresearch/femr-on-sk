@@ -1,0 +1,19 @@
+path_to_output_dir: data/stats/adapter_models_subsample_new
+path_to_results: data/evaluate/adapter_models_subsample
+comparisons:
+  -
+    - clmbr_stanford_cp
+    - clmbr_sk
+
+sample_percentage:
+  - 0.001
+  - 0.01
+  - 0.05
+  - 0.1
+  - 0.2
+  - 0.4
+  - 0.8
+custom_model_path:
+  model_name: clmbr_sk
+  model_path: "data/evaluate/adapter_models/clmbr_sk"
+overwrite: True

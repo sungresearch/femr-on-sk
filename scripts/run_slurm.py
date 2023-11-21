@@ -1177,13 +1177,6 @@ if __name__ == "__main__":
         """
         Evaluate adapter model using config file
         If args.evaluate_adapter is path, runs all config files.
-
-        Example yml config:
-            ```
-            path_to_output_dir: data/evaluate/adapter_models
-            path_to_models: data/adapter_models
-            overwrite: True
-            ```
         """
         config_path = os.path.join(path_root, "configs", args.compute_stats)
         configs = get_configs(config_path)
