@@ -13,8 +13,10 @@ transformer_config:
         - 1e-4
         - 1e-5
         - 1e-6
+        - 1e-7
+        - 1e-8
     rotary_type:
         - per_head
     n_heads: 12
     n_layers: 12
-    max_iter: 1000000
+    max_iter: 10000000
