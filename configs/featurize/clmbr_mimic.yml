@@ -1,0 +1,7 @@
+path_to_labels: data/labels
+path_to_output_dir: data/features/clmbr_mimic
+overwrite: True
+
+featurizer_config:
+    type: clmbr
+    path_to_clmbr_data: data/clmbr_models/clmbr_mimic

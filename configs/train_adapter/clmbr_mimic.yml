@@ -1,0 +1,6 @@
+path_to_output_dir: data/adapter_models/clmbr_mimic
+path_to_labels: data/labels
+path_to_features: data/features/clmbr_mimic
+feature_type: clmbr
+scale_features: True
+overwrite: True

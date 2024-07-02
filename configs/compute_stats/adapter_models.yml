@@ -1,17 +1,34 @@
 path_to_output_dir: data/stats/adapter_models
 path_to_results: data/evaluate/adapter_models
 comparisons:
+  # -
+  #   - count_sk_noextension_gbm
+  #   - clmbr_stanford
+  # -
+  #   - count_sk_noextension_gbm
+  #   - clmbr_stanford_cp
+  # -
+  #   - clmbr_sk
+  #   - clmbr_stanford
+  # -
+  #   - clmbr_sk
+  #   - clmbr_stanford_cp
+  # -
+  #   - count_sk_noextension_gbm
+  #   - clmbr_mimic
+  # -
+  #   - count_sk_noextension_gbm
+  #   - clmbr_mimic_cp
+  # -
+  #   - clmbr_sk
+  #   - clmbr_mimic
+  # -
+  #   - clmbr_sk
+  #   - clmbr_mimic_cp
   -
-    - count_sk_noextension_gbm
+    - clmbr_mimic
     - clmbr_stanford
   -
-    - count_sk_noextension_gbm
+    - clmbr_mimic_cp
     - clmbr_stanford_cp
-  -
-    - clmbr_sk
-    - clmbr_stanford
-  -
-    - clmbr_sk
-    - clmbr_stanford_cp
-
 overwrite: True
