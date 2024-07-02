@@ -6,12 +6,12 @@ This codebase contains scripts to:
 1. compute count-based features and train logistic regression models
 2. pretrain [CLMBR](https://www.sciencedirect.com/science/article/pii/S1532046420302653) foundation model on SK data
 3. conduct fine-tuning and linear-probing using CLMBR features
-4. adaption of CLMBR pretrained on de-identified [Stanford Electronic Health Records in OMOP (STARR OMOP)](https://med.stanford.edu/starr-omop.html)
+4. adaptation of the publicly available [CLMBR-T-base](https://huggingface.co/StanfordShahLab/clmbr-t-base) pretrained on 2.57 million deidentified EHRs from Stanford Medicine.
 
 #### Evaluation settings:
 - Benchmark GBM and CLMBR models
 - Few-shots settings
-- CLMBR models pretrained on subsamples
+- Pretraining from scratch and continued pretraining on subsamples
 
 ## Installation
 
