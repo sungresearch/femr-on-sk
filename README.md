@@ -33,9 +33,9 @@ pip install -e .
 
 #### Install FEMR
 ```
-pip install femr
+pip install femr==0.1.16
 pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-pip install "femr_cuda[models]"
+pip install "femr_cuda[models]==0.1.16"
 ```
 
 #### Post installation
