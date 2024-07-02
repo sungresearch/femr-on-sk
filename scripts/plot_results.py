@@ -33,9 +33,11 @@ marker_style = {
 
 model_label = {
     "GBM": "GBM",
-    "CLMBR": "CLMBR",
-    "CLMBR_DAPT": "CLMBR$_{DAPT}$",
-    "CLMBR_SK": "CLMBR$_{SK}$",
+    "CLMBR": "FM$_{SM}$",
+    "CLMBR_MIMIC": "FM$_{MIMIC}$",
+    "CLMBR_MIMIC_DAPT": "FM$E^{+SK}_{MIMIC}$",
+    "CLMBR_DAPT": "FM$E^{+SK}_{SM}$",
+    "CLMBR_SK": "FM$_{SK}$",
 }
 
 tasks = [
@@ -659,7 +661,14 @@ if __name__ == "__main__":
 
         # main table
         path_to_csv = os.path.join(path_results, "adapter_models/results.csv")
-        models = ["GBM", "CLMBR", "CLMBR_DAPT"]
+        models = [
+            "GBM",
+            "CLMBR_MIMIC",
+            "CLMBR_MIMIC_DAPT",
+            "CLMBR",
+            "CLMBR_DAPT",
+            "CLMBR_SK",
+        ]
 
         for metric in ["AUROC", "AUPRC", "AUPRC_C", "ECE"]:
             df = make_table_adapter_models(

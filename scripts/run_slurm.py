@@ -398,7 +398,7 @@ if __name__ == "__main__":
             ```
         """
         PATH_SCRIPT = os.path.join(path_root, "scripts", "continue_pretrain.py")
-        PATH_CONFIG = os.path.join(path_root, "configs", args.featurize)
+        PATH_CONFIG = os.path.join(path_root, "configs", args.continue_pretrain)
         configs = get_configs(PATH_CONFIG)
 
         for config in configs:
@@ -494,6 +494,15 @@ if __name__ == "__main__":
                 PATH_OG_CLMBR_DATA = os.path.join(
                     path_root, config["path_to_og_clmbr_data"]
                 )
+
+                # select best CLMBR model if directory contains multiple CLMBR models
+                if "clmbr_model" not in list_dir(PATH_OG_CLMBR_DATA):
+                    PATH_OG_CLMBR_DATA = os.path.join(
+                        path_root,
+                        config["path_to_og_clmbr_data"],
+                        get_best_clmbr_model(PATH_OG_CLMBR_DATA),
+                    )
+
             else:
                 PATH_PRETRAIN_SCRIPT = os.path.join(path_root, "scripts", "pretrain.py")
                 PATH_OG_CLMBR_DATA = None
@@ -573,6 +582,14 @@ if __name__ == "__main__":
                 PATH_OG_CLMBR_DATA = os.path.join(
                     path_root, config["path_to_og_clmbr_data"]
                 )
+
+                # select best CLMBR model if directory contains multiple CLMBR models
+                if "clmbr_model" not in list_dir(PATH_OG_CLMBR_DATA):
+                    PATH_OG_CLMBR_DATA = os.path.join(
+                        path_root,
+                        config["path_to_og_clmbr_data"],
+                        get_best_clmbr_model(PATH_OG_CLMBR_DATA),
+                    )
             else:
                 PATH_PRETRAIN_SCRIPT = os.path.join(path_root, "scripts", "pretrain.py")
                 PATH_OG_CLMBR_DATA = None

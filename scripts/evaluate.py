@@ -45,7 +45,7 @@ def get_adapter_model_results(args):
     # load features
     print("loading features")
     X_test, y_test, pids = read_features(
-        m_info["path_to_patient_database"],
+        path_extract,
         m_info["path_to_features"],
         m_info["path_to_labels"],
         m_info["feature_type"],
@@ -64,7 +64,7 @@ def get_adapter_model_results(args):
 
     # evaluate
     results = {
-        "data_path": m_info["path_to_patient_database"],
+        "data_path": path_extract,
         "model": args.path_to_model,
         "labels": y_test,
         "predictions": preds,
