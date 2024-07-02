@@ -7,6 +7,8 @@ model_names = {
     "clmbr_stanford_cp": "CLMBR_DAPT",
     "clmbr_stanford_cp_ft": "Stanford_DAPT_FT",
     "clmbr_stanford_tapt": "CLMBR_CAPT",
+    "clmbr_mimic": "CLMBR_MIMIC",
+    "clmbr_mimic_cp": "CLMBR_MIMIC_DAPT",
 }
 
 task_names = {
